@@ -50,13 +50,16 @@ button.tag:hover,button.tag.on{outline:1px solid var(--accent)}
 .search input{width:100%;font:inherit;font-size:14px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--text)}
 .search input:focus{outline:none;border-color:var(--accent)}
 .drop{position:absolute;right:0;top:calc(100% + 6px);z-index:5;width:min(340px,calc(100vw - 32px));max-height:min(420px,70vh);overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:6px 0;font-size:14px}
-.drop h4{margin:6px 12px 2px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.drop button,.drop a{display:flex;text-decoration:none;box-sizing:border-box;gap:8px;width:100%;text-align:left;background:none;border:0;padding:7px 12px;font:inherit;color:var(--text);cursor:pointer}
-.drop button:hover,.drop a:hover{background:var(--chip)}
-.drop button span:first-child,.drop a span:first-child{flex:1;min-width:0;overflow-wrap:anywhere}
+.drop button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;padding:7px 12px;font:inherit;color:var(--text);cursor:pointer}
+.drop button:hover{background:var(--chip)}
+.drop button span:nth-child(2){flex:1;min-width:0;overflow-wrap:anywhere}
+.drop .box{flex:none;width:16px;height:16px;border:1.5px solid var(--muted);border-radius:4px;position:relative}
+.drop .box.on{background:var(--accent);border-color:var(--accent)}
+.drop .box.on::after{content:"";position:absolute;left:4px;top:0;width:4px;height:9px;border:solid var(--bg);border-width:0 2px 2px 0;transform:rotate(45deg)}
 .drop .c{color:var(--muted);font-variant-numeric:tabular-nums}
 .drop .none{color:var(--muted);padding:7px 12px}
 .filter{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--muted);margin:-4px 0 12px}
+.filter button.plain{border-color:var(--line);background:none;color:var(--muted)}
 .filter button{border:1px solid var(--accent);background:var(--chip);color:var(--text);border-radius:999px;padding:3px 10px;font:inherit;font-size:14px;cursor:pointer}
 .top{display:flex;gap:8px;align-items:flex-start}
 .top .hl{flex:1;min-width:0}
@@ -110,7 +113,7 @@ a{color:var(--accent)}
     <button data-tab="today">Today</button>
     <button data-tab="saved">Saved</button>
     <div class="search">
-      <input id="q" type="search" placeholder="Search" autocomplete="off" aria-label="Search tags and articles">
+      <input id="q" type="search" placeholder="Search tags" autocomplete="off" aria-label="Search tags">
       <div class="drop" id="drop" hidden></div>
     </div>
   </div>
@@ -161,8 +164,7 @@ let saveQueue = load("saveQueue", []);  // saves and removals not yet committed
 let readDays = load("readDays", {});    // data/read.json: {day: [links read]}, shared by devices
 let readQueue = load("readQueue", []);  // [{day, link}] not yet committed
 let tab = "today";
-let tagFilter = "";   // "#Tag" picked from a card or the search list; not kept across visits
-let query = "";       // text typed in the search box
+const picked = new Set();  // tags ticked in the search list or tapped on a card; not kept across visits
 let syncError = "";
 
 // ---------- small helpers ----------
@@ -485,7 +487,7 @@ function cardHtml(s) {
     list = `<ul class="srcs" hidden>${items}</ul>`;
   }
   const tags = s.tags.map((t) =>
-    `<button class="tag${t.tag === tagFilter ? " on" : ""}" data-tag="${esc(t.tag)}" title="Show only ${esc(t.tag)}">${esc(t.tag)}${t.points > 0 ? ` <b>+${fmtPoints(t.points)}</b>` : ""}</button>`).join("");
+    `<button class="tag${picked.has(t.tag) ? " on" : ""}" data-tag="${esc(t.tag)}" title="${picked.has(t.tag) ? "Stop filtering by" : "Filter by"} ${esc(t.tag)}">${esc(t.tag)}${t.points > 0 ? ` <b>+${fmtPoints(t.points)}</b>` : ""}</button>`).join("");
   const target = saveTarget(s);
   const feedName = s.sources.length === 1 ? `<span class="tag" style="background:none;color:var(--muted)">${esc(s.sources[0].feed)}</span>` : "";
   const saveOn = isSaved(target.link);
@@ -522,19 +524,11 @@ function drawTabs() {
   $("bar").querySelector('[data-tab="saved"]').textContent = "Saved" + (n ? ` (${n})` : "");
 }
 
-// ---------- tag filter and search ----------
-// Lower case without accents, so "kozgazdasag" finds "Közgazdaság".
+// ---------- tag filter ----------
+// Lower case without accents, so "kozgazdasag" finds "#Kozgazdasag" and "kozg" finds both.
 function fold(s) { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
-function storyText(s) {
-  return fold([s.headline, ...s.sources.map((src) => src.title + " " + src.feed), ...tagNames(s)].join(" "));
-}
-function matches(s) {
-  if (tagFilter && !tagNames(s).includes(tagFilter)) return false;
-  const words = fold(query).split(/\s+/).filter(Boolean);
-  if (!words.length) return true;
-  const text = storyText(s);
-  return words.every((w) => text.includes(w));
-}
+// A card shows when it has any ticked tag.
+function matches(s) { return !picked.size || tagNames(s).some((t) => picked.has(t)); }
 // Today's tags, most used first.
 function tagCounts() {
   const counts = {};
@@ -542,34 +536,24 @@ function tagCounts() {
   return Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 function drawDrop() {
-  const q = fold(query.trim()).replace(/^#/, "");
+  const q = fold($("q").value.trim()).replace(/^#/, "");
   const tags = tagCounts().filter(([t]) => !q || fold(t).includes(q));
-  let html = `<h4>Tags</h4>` + (tags.length
-    ? tags.map(([t, n]) => `<button data-pick="${esc(t)}"><span>${esc(t)}</span><span class="c">${n}</span></button>`).join("")
-    : `<div class="none">${feed ? "No matching tags" : "Loading the feed…"}</div>`);
-  if (q) {
-    const found = stories().filter(matches);
-    html += `<h4>Articles</h4>` + (found.length
-      ? found.slice(0, 20).map((s) => {
-          const one = s.sources.length === 1;
-          const link = one ? `href="${esc(s.sources[0].link)}" target="_blank" rel="noopener noreferrer" data-open="${esc(s.id)}"` : `data-goto="${esc(s.id)}"`;
-          return `<${one ? "a" : "button"} class="hit" ${link}><span>${esc(s.headline)}</span><span class="c">${one ? esc(s.sources[0].feed) : s.sources.length + " sources"}</span></${one ? "a" : "button"}>`;
-        }).join("")
-      : `<div class="none">No matching articles</div>`);
-  }
-  $("drop").innerHTML = html;
+  const y = $("drop").hidden ? 0 : $("drop").scrollTop;
+  $("drop").innerHTML = tags.length
+    ? tags.map(([t, n]) => `<button data-pick="${esc(t)}" role="checkbox" aria-checked="${picked.has(t)}"><span class="box${picked.has(t) ? " on" : ""}"></span><span>${esc(t)}</span><span class="c">${n}</span></button>`).join("")
+    : `<div class="none">${feed ? "No matching tags" : "Loading the feed…"}</div>`;
   $("drop").hidden = false;
+  $("drop").scrollTop = y;
 }
-function closeDrop() { $("drop").hidden = true; }
-function setTag(t) {
-  tagFilter = t;
-  query = "";
-  $("q").value = "";
-  closeDrop();
-  $("q").blur();
+function closeDrop() { $("drop").hidden = true; $("q").value = ""; }
+function toggleTag(t) {
+  if (picked.has(t)) picked.delete(t); else picked.add(t);
   tab = "today";
   render();
-  window.scrollTo(0, 0);
+}
+function clearTags() {
+  picked.clear();
+  render();
 }
 function todayHtml() {
   if (!feed) return `<div class="empty">Loading the feed…</div>`;
@@ -583,13 +567,14 @@ function todayHtml() {
   if (!persistent) {
     notes.push("This browser isn't keeping data for this page, so the token and the tap highlights are lost when it closes.");
   }
-  const filtering = !!(tagFilter || query.trim());
+  const filtering = picked.size > 0;
   const main = (feed.stories || []).filter(matches), also = (feed.also_today || []).filter(matches);
   let html = notes.map((n) => `<div class="note">${n}</div>`).join("");
   if (filtering) {
     const n = main.length + also.length;
-    const what = [tagFilter, query.trim() && `“${query.trim()}”`].filter(Boolean).map(esc).join(" + ");
-    html += `<div class="filter">${n} card${n === 1 ? "" : "s"} for <button data-clear title="Show everything">${what} ✕</button></div>`;
+    const chips = [...picked].map((t) => `<button data-tag="${esc(t)}" title="Remove ${esc(t)}">${esc(t)} ✕</button>`).join("");
+    const all = picked.size > 1 ? `<button data-clear class="plain">Clear all</button>` : "";
+    html += `<div class="filter">${n} card${n === 1 ? "" : "s"} with ${chips}${all}</div>`;
     if (!n) return html + `<div class="empty">Nothing today matches.</div>`;
   }
   if (main.length) html += main.map(cardHtml).join("");
@@ -822,11 +807,9 @@ document.addEventListener("click", (ev) => {
   if (!ev.target.closest(".search")) closeDrop();
   const el = ev.target.closest("a,button");
   if (!el) return;
-  if (el.dataset.tag) return setTag(el.dataset.tag === tagFilter ? "" : el.dataset.tag);
-  if (el.dataset.pick) return setTag(el.dataset.pick);
-  if (el.hasAttribute("data-clear")) return setTag("");
-  if (el.dataset.goto) return goTo(el.dataset.goto);
-  if (el.dataset.open && el.closest(".drop")) closeDrop();
+  if (el.dataset.tag) return toggleTag(el.dataset.tag);
+  if (el.dataset.pick) return toggleTag(el.dataset.pick);
+  if (el.hasAttribute("data-clear")) return clearTags();
   const card = el.closest(".card");
   const id = card?.dataset.id;
   if (el.dataset.removeFeed) return removeFeed(el);
@@ -851,31 +834,10 @@ document.addEventListener("auxclick", (ev) => {
 });
 $("settings").onclick = () => (inSettings ? render() : setupView());
 $("q").addEventListener("focus", drawDrop);
-$("q").addEventListener("input", () => {
-  query = $("q").value;
-  if (tab !== "today") tab = "today";
-  render();
-  drawDrop();
-});
+$("q").addEventListener("input", drawDrop);
 $("q").addEventListener("keydown", (ev) => {
-  if (ev.key === "Enter") { closeDrop(); $("q").blur(); }
-  if (ev.key === "Escape") {
-    if ($("drop").hidden || !query) { query = ""; $("q").value = ""; render(); }
-    closeDrop();
-    $("q").blur();
-  }
+  if (ev.key === "Enter" || ev.key === "Escape") { closeDrop(); $("q").blur(); }
 });
-// A group picked in the search list: show it in the feed with its sources open.
-function goTo(id) {
-  closeDrop();
-  $("q").blur();
-  const card = document.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
-  if (!card) return;
-  const d = card.closest("details.also");
-  if (d) d.open = true;
-  toggleSources(card, true);
-  card.scrollIntoView({block: "start", behavior: "smooth"});
-}
 window.addEventListener("online", flush);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible" || !token) return;
