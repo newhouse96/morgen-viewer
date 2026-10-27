@@ -493,8 +493,9 @@ function toggleSave(title, link) {
 // ---------- drawing ----------
 function cardHtml(s) {
   const u = ui[s.id] || {};
-  const seen = u.open ? " seen" : "";
   const read = isRead;
+  // Grey once opened here or read on any device (data/read.json).
+  const seen = u.open || s.sources.some((src) => read(src.link)) ? " seen" : "";
   const tick = (on) => on ? `<span class="read" title="Read">✓</span> ` : "";
   let head, list = "";
   if (s.sources.length === 1) {
@@ -846,6 +847,17 @@ async function refresh() {
   render();
   showSync();
 }
+// Reads from other devices: picked up whenever the page comes back into view.
+async function refreshReads() {
+  try {
+    const file = await getFile("data/read.json");
+    const days = mergeReads(file.text ? JSON.parse(file.text) : {}, []);
+    if (JSON.stringify(days) === JSON.stringify(readDays)) return;
+    readDays = days;
+    keep("readDays", readDays);
+    if (!inSettings) render();
+  } catch (e) { /* the next full refresh reports problems */ }
+}
 // Highlights and undo records only matter for recent cards.
 function prune() {
   const cutoff = budapestDay(new Date(Date.now() - KEEP_DAYS * 864e5));
@@ -918,7 +930,7 @@ window.addEventListener("online", flush);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible" || !token) return;
   flush();
-  if (Date.now() - lastLoad > 15 * 60 * 1000) refresh();
+  if (Date.now() - lastLoad > 15 * 60 * 1000) refresh(); else refreshReads();
 });
 
 render();
