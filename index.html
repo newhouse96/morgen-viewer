@@ -123,8 +123,8 @@ a{color:var(--accent)}
     <button data-tab="today">Today</button>
     <button data-tab="saved">Saved</button>
     <select class="view" id="view" aria-label="View">
-      <option value="default">Default</option>
       <option value="grouped">Grouped</option>
+      <option value="ranked">Ranked</option>
     </select>
     <div class="search">
       <input id="q" type="search" placeholder="Search" autocomplete="off" aria-label="Search tags">
@@ -178,7 +178,9 @@ let saveQueue = load("saveQueue", []);  // saves and removals not yet committed
 let readDays = load("readDays", {});    // data/read.json: {day: [links read]}, shared by devices
 let readQueue = load("readQueue", []);  // [{day, link}] not yet committed
 let tab = "today";
-let view = load("view", "default");   // "default" (ranked) or "grouped" (by tag)
+// "grouped" (by tag, the default) or "ranked" (one list by score). Anything else,
+// like the old "default", means grouped.
+let view = load("view", "grouped") === "ranked" ? "ranked" : "grouped";
 const expanded = new Set();           // groups opened past their top three
 const GROUP_TOP = 3;
 const picked = new Set();  // tags ticked in the search list or tapped on a card; not kept across visits
