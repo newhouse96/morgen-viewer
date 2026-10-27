@@ -297,7 +297,7 @@ function applyTagOp(tags, recs, op) {
       t.weight = next;
     }
     card[op.kind] = done;
-    return op.kind;
+    return op.kind + " " + op.card + (op.ctx ? " " + op.ctx : "");
   }
   if (op.t === "undo") {
     const done = card[op.kind];
@@ -306,7 +306,7 @@ function applyTagOp(tags, recs, op) {
       if (name in tags) { const t = tagEntry(tags, name); t.weight = clamp(t.weight - change); }
     }
     delete card[op.kind];
-    return "undo " + op.kind;
+    return "undo " + op.kind + " " + op.card + (op.ctx ? " " + op.ctx : "");
   }
   return null;
 }
@@ -396,7 +396,8 @@ async function commitReads() {
   await withRetry(async () => {
     const file = await getFile("data/read.json");
     const days = mergeReads(file.text ? JSON.parse(file.text) : {}, ops);
-    await putFile("data/read.json", JSON.stringify(days, null, 1) + "\n", file.sha, "Viewer: read");
+    await putFile("data/read.json", JSON.stringify(days, null, 1) + "\n", file.sha,
+      "Viewer: " + ops.map((op) => ["read", op.card, op.ctx].filter(Boolean).join(" ")).join(", "));
     readDays = days;
   });
   readQueue = readQueue.slice(ops.length);
@@ -431,20 +432,36 @@ function setUi(id, key, on) {
   if (on) u[key] = true; else delete u[key];
   keep("ui", ui);
 }
+// Where the card sat when it was tapped, for the commit message, so the review
+// can relate taps to positions: "pos=4 view=grouped group=#Tag filter=#A,#B".
+function tapContext(id) {
+  const cards = [...document.querySelectorAll("#app article.card")];
+  const i = cards.findIndex((c) => c.dataset.id === id);
+  const parts = [];
+  if (i >= 0) parts.push("pos=" + (i + 1));
+  parts.push("view=" + view);
+  if (i >= 0 && view === "grouped") {
+    let h = cards[i].previousElementSibling;
+    while (h && !h.matches("h3.group")) h = h.previousElementSibling;
+    if (h) parts.push("group=" + h.dataset.group);
+  } else if (i >= 0 && cards[i].closest("details.also")) parts.push("also");
+  if (picked.size) parts.push("filter=" + [...picked].join(","));
+  return parts.join(" ");
+}
 function vote(id, kind) {
   const story = findStory(id);
   if (!story) return;
   const u = ui[id] || {};
   const other = kind === "like" ? "dislike" : "like";
   if (u[kind]) {
-    tagQueue.push({t: "undo", card: id, kind});
+    tagQueue.push({t: "undo", card: id, kind, ctx: tapContext(id)});
     setUi(id, kind, false);
   } else {
     if (u[other]) {
-      tagQueue.push({t: "undo", card: id, kind: other});
+      tagQueue.push({t: "undo", card: id, kind: other, ctx: tapContext(id)});
       setUi(id, other, false);
     }
-    tagQueue.push({t: "add", card: id, kind, tags: tagNames(story), delta: kind === "like" ? LIKE : DISLIKE});
+    tagQueue.push({t: "add", card: id, kind, tags: tagNames(story), delta: kind === "like" ? LIKE : DISLIKE, ctx: tapContext(id)});
     setUi(id, kind, true);
   }
   keep("tagQueue", tagQueue);
@@ -459,12 +476,12 @@ function opened(id, link) {
   if (!story) return;
   const u = ui[id] || {};
   if (link && !isRead(link)) {
-    readQueue.push({day: id.slice(0, 10), link});
+    readQueue.push({day: id.slice(0, 10), link, card: id, ctx: tapContext(id)});
     keep("readQueue", readQueue);
     refreshCard(id);
   }
   if (u.open) return flush();
-  tagQueue.push({t: "add", card: id, kind: "open", tags: tagNames(story), delta: OPEN});
+  tagQueue.push({t: "add", card: id, kind: "open", tags: tagNames(story), delta: OPEN, ctx: tapContext(id)});
   setUi(id, "open", true);
   keep("tagQueue", tagQueue);
   refreshCard(id);
