@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Morgen</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<!--
+  Morgen viewer. A fixed local file: open it from disk on each device and
+  paste the GitHub token once. It loads data/feed.json and data/saved.json
+  from the private repo and commits taps to data/tags.json and saves to
+  data/saved.json through the GitHub API. The token stays in this browser's
+  localStorage and is never written to the repo.
+-->
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--text:#1d1d1b;--muted:#6b6b66;--line:#e3e1db;--accent:#2f5d8a;--chip:#eef2f6;--good:#2e7d4f;--bad:#b3403a;--warn:#9a6a00}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161615;--card:#212120;--text:#ecebe7;--muted:#9b9a94;--line:#33322f;--accent:#8db7e0;--chip:#2a3138;--good:#7cc79a;--bad:#e48a84;--warn:#e0b85a}}
+:root[data-theme="dark"]{--bg:#161615;--card:#212120;--text:#ecebe7;--muted:#9b9a94;--line:#33322f;--accent:#8db7e0;--chip:#2a3138;--good:#7cc79a;--bad:#e48a84;--warn:#e0b85a}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:12px 16px 40px}
+header{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* UnifrakturMaguntia (SIL Open Font License), cut down to the letters of "Morgen". */
+@font-face{font-family:"Morgen Fraktur";src:url(data:font/woff2;base64,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) format("woff2")}
+h1{font:400 34px/1.1 "Morgen Fraktur",serif;margin:2px 0;flex:1}
+.icon{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:5px 10px;font:inherit;font-size:14px;cursor:pointer}
+.sub{color:var(--muted);font-size:14px;margin:2px 0 8px}
+.sync{font-size:13px;color:var(--muted);min-height:18px}
+.sync.err{color:var(--bad)}.sync.wait{color:var(--warn)}
+.tabs{display:flex;gap:8px;margin:10px 0 14px}
+.tabs button{border:1px solid var(--line);background:var(--card);color:var(--text);padding:6px 14px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer}
+.tabs button.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:8px;padding:8px 12px;font-size:14px;margin-bottom:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.hl{font:inherit;font-weight:600;color:var(--text);text-decoration:none;display:block;text-align:left;background:none;border:0;padding:0;width:100%;cursor:pointer;overflow-wrap:anywhere}
+a.hl:hover,button.hl:hover{color:var(--accent)}
+a.hl.seen,button.hl.seen{color:var(--muted)}
+button.hl .n{font-weight:400;font-size:13px;color:var(--accent);white-space:nowrap}
+.srcs{margin:8px 0 0;padding:0;list-style:none;font-size:14px}
+.srcs li{padding:6px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.srcs a{color:var(--accent);text-decoration:none}.srcs .f{color:var(--muted);white-space:nowrap}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;font-size:13px}
+.tag{background:var(--chip);border-radius:6px;padding:2px 7px}.tag b{font-weight:600;color:var(--accent)}
+.top{display:flex;gap:8px;align-items:flex-start}
+.top .hl{flex:1;min-width:0}
+.votes{display:flex;gap:2px;align-items:center;margin:-6px -8px 0 0;flex:none}
+.votes .score{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;margin-right:2px}
+.votes button,.meta .save{background:none;border:0;padding:6px;color:var(--muted);opacity:.45;cursor:pointer;border-radius:8px;line-height:0}
+.votes button:hover,.meta .save:hover{opacity:.9}
+.votes svg,.meta .save svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.votes button.on{opacity:1}
+.votes button.on.like{color:var(--good)}.votes button.on.like svg{fill:currentColor}
+.votes button.on.dislike{color:var(--bad)}.votes button.on.dislike svg{fill:currentColor}
+.meta .save{margin-left:auto;padding:2px 4px}
+.meta .save svg{width:18px;height:18px}
+.meta .save.on{opacity:1;color:var(--accent)}.meta .save.on svg{fill:currentColor}
+details.also>summary{cursor:pointer;font-weight:600;margin:22px 0 10px}
+.foot{color:var(--muted);font-size:13px;margin-top:20px}
+.saved li{display:flex;gap:10px;align-items:flex-start}
+.saved li a{flex:1}
+.saved li button{border:0;background:none;color:var(--muted);font:inherit;cursor:pointer;padding:0 4px}
+.empty{color:var(--muted);padding:20px 0}
+.setup{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.setup label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
+.setup input{width:100%;font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
+.setup ol{padding-left:20px;font-size:14px}
+.setup .row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.setup button{font:inherit;font-size:15px;padding:8px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--bg);cursor:pointer}
+.setup button.plain{background:none;color:var(--text);border-color:var(--line)}
+.setup+.setup{margin-top:14px}
+.feeds{list-style:none;padding:0;margin:10px 0 0}
+.feeds li{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.feeds li div{flex:1;min-width:0}
+.feeds small.why{color:var(--bad)}
+.mark{flex:none;width:18px;text-align:center;font-weight:700}.mark.yes{color:var(--good)}.mark.no{color:var(--bad)}
+.feeds li small{display:block;color:var(--muted);overflow-wrap:anywhere}
+.setup .feeds button{background:none;color:var(--muted);border:1px solid var(--line);padding:3px 10px;font-size:13px}
+.setup .feeds button.sure{color:var(--bad);border-color:var(--bad)}
+.msg{font-size:14px;margin-top:10px}.msg.err{color:var(--bad)}
+a{color:var(--accent)}
+.read{color:var(--good);font-weight:700}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Morgen</h1>
+    <button class="icon" id="settings" title="Token and sources">Settings</button>
+  </header>
+  <div class="sub" id="sub"></div>
+  <div class="sync" id="sync"></div>
+  <div id="app"></div>
+</main>
+<script>
+"use strict";
+
+const API = "https://api.github.com";
+const DEFAULT_REPO = "newhouse96/Morgen";
+const LIKE = 10, DISLIKE = -10, OPEN = 5, MAX_WEIGHT = 100;
+const KEEP_DAYS = 7;
+
+// ---------- storage ----------
+// localStorage can be missing or throw (private windows, some ways of opening
+// a local file on Android). Fall back to memory and say so on the page.
+const memory = {};
+let persistent = true;
+function load(key, fallback) {
+  try {
+    const raw = localStorage.getItem("morgen." + key);
+    if (raw !== null) return JSON.parse(raw);
+  } catch (e) { persistent = false; }
+  return key in memory ? memory[key] : fallback;
+}
+function keep(key, value) {
+  memory[key] = value;
+  try { localStorage.setItem("morgen." + key, JSON.stringify(value)); }
+  catch (e) { persistent = false; }
+}
+function drop(key) {
+  delete memory[key];
+  try { localStorage.removeItem("morgen." + key); } catch (e) { persistent = false; }
+}
+try {
+  localStorage.setItem("morgen.probe", "1");
+  persistent = localStorage.getItem("morgen.probe") === "1";
+} catch (e) { persistent = false; }
+
+let token = load("token", "");
+let repo = load("repo", DEFAULT_REPO);
+let feed = load("feed", null);          // last loaded feed.json, shown at once on open
+let saved = load("saved", null);        // saved.json as a list, oldest first
+let ui = load("ui", {});                // ui[cardId] = {like, dislike, open}: highlights
+let records = load("records", {});      // records[cardId][kind] = {tag: change committed}
+let tagQueue = load("tagQueue", []);    // tag changes not yet committed
+let saveQueue = load("saveQueue", []);  // saves and removals not yet committed
+let readDays = load("readDays", {});    // data/read.json: {day: [links read]}, shared by devices
+let readQueue = load("readQueue", []);  // [{day, link}] not yet committed
+let tab = "today";
+let syncError = "";
+
+// ---------- small helpers ----------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const budapestDay = (d = new Date()) =>
+  new Intl.DateTimeFormat("en-CA", {timeZone: "Europe/Budapest"}).format(d);
+const niceDay = (day) => new Date(day + "T12:00:00Z").toLocaleDateString("en-GB",
+  {weekday: "long", day: "numeric", month: "long", timeZone: "UTC"});
+const clamp = (w) => Math.min(Math.max(w, 0), MAX_WEIGHT);
+const fmtPoints = (p) => (Math.round(p * 10) / 10).toString();
+
+function b64ToText(b64) {
+  const bin = atob(b64.replace(/\s/g, ""));
+  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+}
+function textToB64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(bin);
+}
+
+// ---------- GitHub API ----------
+class GhError extends Error {
+  constructor(status, message) { super(message); this.status = status; }
+}
+async function gh(path, opts = {}) {
+  let res;
+  try {
+    res = await fetch(`${API}/repos/${repo}/contents/${path}`, {
+      method: opts.method || "GET",
+      cache: "no-store",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Accept": opts.raw ? "application/vnd.github.raw+json" : "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        ...(opts.body ? {"Content-Type": "application/json"} : {}),
+      },
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+  } catch (e) {
+    throw new GhError(0, "No connection to GitHub");
+  }
+  if (!res.ok) {
+    let msg = res.statusText;
+    try { msg = (await res.json()).message || msg; } catch (e) {}
+    throw new GhError(res.status, msg);
+  }
+  return opts.raw ? res.text() : res.json();
+}
+// A file with its sha, or {text: null, sha: null} when it does not exist yet.
+async function getFile(path) {
+  try {
+    const f = await gh(path);
+    return {text: b64ToText(f.content), sha: f.sha};
+  } catch (e) {
+    if (e.status === 404) return {text: null, sha: null};
+    throw e;
+  }
+}
+async function putFile(path, text, sha, message) {
+  const body = {message, content: textToB64(text)};
+  if (sha) body.sha = sha;
+  await gh(path, {method: "PUT", body});
+}
+function explain(e) {
+  if (e.status === 401) return "GitHub refused the token (expired or wrong). Open Settings to paste a new one.";
+  if (e.status === 403) return "The token can't do this. It needs Contents: Read and write on " + repo + ".";
+  if (e.status === 404) return "GitHub can't find " + repo + " with this token. Check the repository name and that the token covers it.";
+  if (e.status === 0) return "No connection to GitHub.";
+  return "GitHub said: " + e.message;
+}
+
+// ---------- tags.json, written the way render.py writes it ----------
+function pyJson(value) {
+  // json.dumps with its default separators and ensure_ascii.
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value).replace(/[\u007f-￿]/g,
+      (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+  }
+  if (Array.isArray(value)) return "[" + value.map(pyJson).join(", ") + "]";
+  return "{" + Object.keys(value).map((k) => pyJson(k) + ": " + pyJson(value[k])).join(", ") + "}";
+}
+function writeTags(tags) {
+  const names = Object.keys(tags).sort((a, b) => {
+    const x = a.toLowerCase(), y = b.toLowerCase();
+    return x < y ? -1 : x > y ? 1 : 0;
+  });
+  return "{\n" + names.map((n) => pyJson(n) + ": " + pyJson(tags[n])).join(",\n") + "\n}\n";
+}
+function tagEntry(tags, name) {
+  let t = tags[name];
+  if (typeof t !== "object" || t === null) t = tags[name] = {weight: Number(t) || 0, count: 0};
+  t.weight = Number(t.weight) || 0;
+  return t;
+}
+// Each op changes tags in place and returns a short label for the commit.
+function applyTagOp(tags, recs, op) {
+  const card = (recs[op.card] = recs[op.card] || {});
+  if (op.t === "add") {
+    if (card[op.kind]) return null;  // already counted
+    const done = {};
+    for (const name of op.tags) {
+      const t = tagEntry(tags, name);
+      const next = clamp(t.weight + op.delta);
+      done[name] = next - t.weight;
+      t.weight = next;
+    }
+    card[op.kind] = done;
+    return op.kind;
+  }
+  if (op.t === "undo") {
+    const done = card[op.kind];
+    if (!done) return null;
+    for (const [name, change] of Object.entries(done)) {
+      if (name in tags) { const t = tagEntry(tags, name); t.weight = clamp(t.weight - change); }
+    }
+    delete card[op.kind];
+    return "undo " + op.kind;
+  }
+  return null;
+}
+
+// ---------- committing ----------
+let flushing = false, retryTimer = null;
+async function flush() {
+  if (flushing || !token) return;
+  flushing = true;
+  clearTimeout(retryTimer);
+  try {
+    while (tagQueue.length || saveQueue.length || readQueue.length) {
+      if (tagQueue.length) await commitTags();
+      if (saveQueue.length) await commitSaves();
+      if (readQueue.length) await commitReads();
+    }
+    syncError = "";
+  } catch (e) {
+    syncError = explain(e);
+    if (e.status !== 401 && e.status !== 403) retryTimer = setTimeout(flush, 30000);
+  } finally {
+    flushing = false;
+    showSync();
+  }
+}
+// GitHub answers 409 when the file changed since we read it (the render job or
+// the other device committed); read it again and reapply.
+async function withRetry(fn) {
+  for (let i = 0; ; i++) {
+    try { return await fn(); }
+    catch (e) {
+      if ((e.status === 409 || e.status === 422) && i < 4) continue;
+      throw e;
+    }
+  }
+}
+async function commitTags() {
+  const ops = tagQueue.slice();
+  await withRetry(async () => {
+    const file = await getFile("data/tags.json");
+    const tags = file.text ? JSON.parse(file.text) : {};
+    const recs = JSON.parse(JSON.stringify(records));
+    const labels = ops.map((op) => applyTagOp(tags, recs, op)).filter(Boolean);
+    if (labels.length) {
+      await putFile("data/tags.json", writeTags(tags), file.sha, "Viewer: " + labels.join(", "));
+    }
+    records = recs;
+  });
+  tagQueue = tagQueue.slice(ops.length);
+  keep("records", records);
+  keep("tagQueue", tagQueue);
+}
+async function commitSaves() {
+  const ops = saveQueue.slice();
+  await withRetry(async () => {
+    const file = await getFile("data/saved.json");
+    let list = file.text ? JSON.parse(file.text) : [];
+    if (!Array.isArray(list)) list = [];
+    for (const op of ops) {
+      list = list.filter((s) => !s || s.link !== op.link);
+      if (op.t === "save") list.push({title: op.title, link: op.link});
+    }
+    await putFile("data/saved.json", JSON.stringify(list, null, 1) + "\n", file.sha,
+      ops.length === 1 ? (ops[0].t === "save" ? "Viewer: save" : "Viewer: unsave") : "Viewer: saved list");
+    saved = list;
+  });
+  saveQueue = saveQueue.slice(ops.length);
+  keep("saved", saved);
+  keep("saveQueue", saveQueue);
+}
+// Days older than KEEP_DAYS are dropped on each write.
+function mergeReads(days, items) {
+  const cutoff = budapestDay(new Date(Date.now() - KEEP_DAYS * 864e5));
+  const out = {};
+  for (const [day, links] of Object.entries(days || {})) {
+    if (day >= cutoff && Array.isArray(links)) out[day] = [...links];
+  }
+  for (const {day, link} of items) {
+    if (day < cutoff) continue;
+    out[day] = out[day] || [];
+    if (!out[day].includes(link)) out[day].push(link);
+  }
+  return out;
+}
+async function commitReads() {
+  const ops = readQueue.slice();
+  await withRetry(async () => {
+    const file = await getFile("data/read.json");
+    const days = mergeReads(file.text ? JSON.parse(file.text) : {}, ops);
+    await putFile("data/read.json", JSON.stringify(days, null, 1) + "\n", file.sha, "Viewer: read");
+    readDays = days;
+  });
+  readQueue = readQueue.slice(ops.length);
+  keep("readDays", readDays);
+  keep("readQueue", readQueue);
+}
+function isRead(link) {
+  return Object.values(readDays).some((links) => links.includes(link)) ||
+    readQueue.some((r) => r.link === link);
+}
+function showSync() {
+  const el = $("sync");
+  const waiting = tagQueue.length + saveQueue.length + readQueue.length;
+  el.className = "sync" + (syncError ? " err" : waiting ? " wait" : "");
+  if (syncError) {
+    el.textContent = syncError + (waiting ? ` ${waiting} tap${waiting > 1 ? "s" : ""} waiting, will retry.` : "");
+  } else if (waiting) {
+    el.textContent = "Saving…";
+  } else {
+    el.textContent = "";
+  }
+}
+
+// ---------- taps ----------
+function stories() {
+  return feed ? [...(feed.stories || []), ...(feed.also_today || [])] : [];
+}
+function findStory(id) { return stories().find((s) => s.id === id); }
+function tagNames(story) { return story.tags.map((t) => t.tag); }
+function setUi(id, key, on) {
+  const u = (ui[id] = ui[id] || {});
+  if (on) u[key] = true; else delete u[key];
+  keep("ui", ui);
+}
+function vote(id, kind) {
+  const story = findStory(id);
+  if (!story) return;
+  const u = ui[id] || {};
+  const other = kind === "like" ? "dislike" : "like";
+  if (u[kind]) {
+    tagQueue.push({t: "undo", card: id, kind});
+    setUi(id, kind, false);
+  } else {
+    if (u[other]) {
+      tagQueue.push({t: "undo", card: id, kind: other});
+      setUi(id, other, false);
+    }
+    tagQueue.push({t: "add", card: id, kind, tags: tagNames(story), delta: kind === "like" ? LIKE : DISLIKE});
+    setUi(id, kind, true);
+  }
+  keep("tagQueue", tagQueue);
+  refreshCard(id);
+  showSync();
+  flush();
+}
+// Mark the article read (data/read.json, so every device sees it) and count the first
+// open of each card as +5.
+function opened(id, link) {
+  const story = findStory(id);
+  if (!story) return;
+  const u = ui[id] || {};
+  if (link && !isRead(link)) {
+    readQueue.push({day: id.slice(0, 10), link});
+    keep("readQueue", readQueue);
+    refreshCard(id);
+  }
+  if (u.open) return flush();
+  tagQueue.push({t: "add", card: id, kind: "open", tags: tagNames(story), delta: OPEN});
+  setUi(id, "open", true);
+  keep("tagQueue", tagQueue);
+  refreshCard(id);
+  showSync();
+  flush();
+}
+// What a card saves: the article, or for a group the headline and first source.
+function saveTarget(story) {
+  return story.sources.length === 1
+    ? {title: story.sources[0].title, link: story.sources[0].link}
+    : {title: story.headline, link: story.sources[0].link};
+}
+function isSaved(link) { return (saved || []).some((s) => s && s.link === link); }
+function toggleSave(title, link) {
+  const op = isSaved(link) ? {t: "unsave", link} : {t: "save", title, link};
+  saved = (saved || []).filter((s) => s && s.link !== link);
+  if (op.t === "save") saved.push({title, link});
+  keep("saved", saved);
+  saveQueue.push(op);
+  keep("saveQueue", saveQueue);
+  render();
+  showSync();
+  flush();
+}
+
+// ---------- drawing ----------
+function cardHtml(s) {
+  const u = ui[s.id] || {};
+  const seen = u.open ? " seen" : "";
+  const read = isRead;
+  const tick = (on) => on ? `<span class="read" title="Read">✓</span> ` : "";
+  let head, list = "";
+  if (s.sources.length === 1) {
+    head = `<a class="hl${seen}" href="${esc(s.sources[0].link)}" target="_blank" rel="noopener noreferrer" data-open="${esc(s.id)}">${tick(read(s.sources[0].link))}${esc(s.headline)}</a>`;
+  } else {
+    const items = s.sources.map((src) =>
+      `<li><a href="${esc(src.link)}" target="_blank" rel="noopener noreferrer" data-open="${esc(s.id)}">${tick(read(src.link))}${esc(src.title)}</a> <span class="f">· ${esc(src.feed)}</span></li>`).join("");
+    head = `<button class="hl${seen}" data-toggle aria-expanded="false">${tick(s.sources.some((src) => read(src.link)))}${esc(s.headline)} <span class="n">${s.sources.length} sources</span></button>`;
+    list = `<ul class="srcs" hidden>${items}</ul>`;
+  }
+  const tags = s.tags.map((t) =>
+    `<span class="tag">${esc(t.tag)}${t.points > 0 ? ` <b>+${fmtPoints(t.points)}</b>` : ""}</span>`).join("");
+  const target = saveTarget(s);
+  const feedName = s.sources.length === 1 ? `<span class="tag" style="background:none;color:var(--muted)">${esc(s.sources[0].feed)}</span>` : "";
+  const saveOn = isSaved(target.link);
+  const votes = `<div class="votes">
+      <span class="score" title="Score">${fmtPoints(s.score)}</span>
+      <button class="like${u.like ? " on" : ""}" data-vote="like" aria-pressed="${!!u.like}" title="Upvote" aria-label="Upvote"><svg viewBox="0 0 24 24"><path d="M12 4 4 13h5v7h6v-7h5z"/></svg></button>
+      <button class="dislike${u.dislike ? " on" : ""}" data-vote="dislike" aria-pressed="${!!u.dislike}" title="Downvote" aria-label="Downvote"><svg viewBox="0 0 24 24"><path d="M12 20 4 11h5V4h6v7h5z"/></svg></button>
+    </div>`;
+  const save = `<button class="save${saveOn ? " on" : ""}" data-save aria-pressed="${saveOn}" title="${saveOn ? "Saved" : "Save"}" aria-label="${saveOn ? "Saved" : "Save"}"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-5-6 5z"/></svg></button>`;
+  return `<article class="card" data-id="${esc(s.id)}">
+    <div class="top">${head}${votes}</div>
+    ${list}
+    <div class="meta">${tags}${feedName}${save}</div>
+  </article>`;
+}
+function refreshCard(id) {
+  const el = document.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
+  const story = findStory(id);
+  if (!el || !story) return;
+  const open = el.querySelector("[data-toggle]")?.getAttribute("aria-expanded") === "true";
+  el.outerHTML = cardHtml(story);
+  if (open) toggleSources(document.querySelector(`.card[data-id="${CSS.escape(id)}"]`), true);
+}
+function toggleSources(card, force) {
+  const btn = card.querySelector("[data-toggle]");
+  const list = card.querySelector(".srcs");
+  const open = force ?? btn.getAttribute("aria-expanded") !== "true";
+  btn.setAttribute("aria-expanded", String(open));
+  list.hidden = !open;
+}
+function tabsHtml() {
+  const n = (saved || []).length;
+  return `<div class="tabs">
+    <button data-tab="today" class="${tab === "today" ? "on" : ""}">Today</button>
+    <button data-tab="saved" class="${tab === "saved" ? "on" : ""}">Saved${n ? ` (${n})` : ""}</button>
+  </div>`;
+}
+function todayHtml() {
+  if (!feed) return `<div class="empty">Loading the feed…</div>`;
+  const notes = [];
+  if (feed.date !== budapestDay()) {
+    notes.push(`This is the feed from ${esc(niceDay(feed.date))}. Today's isn't ready yet.`);
+  }
+  if (feed.tagged === false) {
+    notes.push("Claude hadn't tagged today's articles when this feed was built, so they are untagged and in arrival order.");
+  }
+  if (!persistent) {
+    notes.push("This browser isn't keeping data for this page, so the token and the tap highlights are lost when it closes.");
+  }
+  const main = feed.stories || [], also = feed.also_today || [];
+  let html = notes.map((n) => `<div class="note">${n}</div>`).join("");
+  html += main.length ? main.map(cardHtml).join("") : `<div class="empty">Nothing ranked yet. Everything is under Also today.</div>`;
+  if (also.length) {
+    const openAttr = main.length ? "" : " open";
+    html += `<details class="also"${openAttr}><summary>Also today (${also.length})</summary>${also.map(cardHtml).join("")}</details>`;
+  }
+  const failed = (feed.failed || []).map((f) => f.name || f.url).filter(Boolean);
+  if (failed.length) html += `<p class="foot">Failed this morning: ${failed.map(esc).join(", ")}.</p>`;
+  return html;
+}
+function savedHtml() {
+  const seenLinks = new Set();
+  const list = [];
+  for (const s of [...(saved || [])].reverse()) {
+    if (s && s.link && !seenLinks.has(s.link)) { seenLinks.add(s.link); list.push(s); }
+  }
+  if (!list.length) return `<div class="empty">Nothing saved. The Save button on a card puts it here.</div>`;
+  return `<div class="card"><ul class="srcs saved" style="margin:0">${list.map((s) =>
+    `<li><a href="${esc(s.link)}" target="_blank" rel="noopener noreferrer">${esc(s.title || s.link)}</a>
+      <button data-unsave="${esc(s.link)}" title="Remove" aria-label="Remove">✕</button></li>`).join("")}</ul></div>`;
+}
+function render() {
+  if (!token) return setupView();
+  setHeader(false);
+  const alsoOpen = document.querySelector("details.also")?.open;
+  const y = window.scrollY;
+  $("sub").textContent = feed ? niceDay(feed.date) : "";
+  $("app").innerHTML = tabsHtml() + (tab === "today" ? todayHtml() : savedHtml());
+  if (alsoOpen) { const d = document.querySelector("details.also"); if (d) d.open = true; }
+  window.scrollTo(0, y);
+}
+
+// ---------- setup ----------
+let inSettings = false;
+// The header button reads "Settings" on the feed and "Feed" in settings.
+function setHeader(settings) {
+  inSettings = settings;
+  $("settings").textContent = settings ? "Feed" : "Settings";
+  $("settings").hidden = !token;
+}
+function setupView(message) {
+  setHeader(true);
+  $("sub").textContent = "";
+  const tokenForm = `<form class="setup" id="setup" autocomplete="off">
+    <strong>${token ? "GitHub connection" : "Connect this device to GitHub"}</strong>
+    <ol>
+      <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub › New fine-grained token</a>.</li>
+      <li>Repository access: <em>Only select repositories</em> › Morgen. Permissions › Repository › <em>Contents: Read and write</em>. Expiration: 1 year.</li>
+      <li>Generate it and paste it below. It stays in this browser only.</li>
+    </ol>
+    <label for="tok">Token</label>
+    <input id="tok" type="password" placeholder="github_pat_…" value="${esc(token)}" spellcheck="false">
+    <label for="rep">Repository</label>
+    <input id="rep" value="${esc(repo)}" spellcheck="false">
+    <div class="row">
+      <button type="submit">Connect</button>
+      ${token ? `<button type="button" class="plain" id="cancel">Cancel</button>
+      <button type="button" class="plain" id="forget">Forget token</button>` : ""}
+    </div>
+    <div class="msg${message ? " err" : ""}" id="msg">${message ? esc(message) : ""}</div>
+    ${persistent ? "" : `<div class="msg err">This browser won't keep the token after the page closes.</div>`}
+  </form>`;
+  const feedForm = `<form class="setup" id="feedform" autocomplete="off">
+    <strong>Sources</strong>
+    <ul class="feeds" id="feedlist"><li><div>Loading…</div></li></ul>
+    <label for="fname">Add a feed: name</label>
+    <input id="fname" placeholder="Shown on cards, e.g. Telex">
+    <label for="furl">RSS or news sitemap address</label>
+    <input id="furl" type="url" placeholder="https://…" spellcheck="false">
+    <div class="row"><button type="submit">Add feed</button></div>
+    <div class="msg" id="fmsg"></div>
+  </form>`;
+  $("app").innerHTML = token ? feedForm + tokenForm : tokenForm;
+  $("setup").onsubmit = async (ev) => {
+    ev.preventDefault();
+    const t = $("tok").value.trim(), r = $("rep").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/\/+$/, "");
+    if (!t || !/^[\w.-]+\/[\w.-]+$/.test(r)) { $("msg").textContent = "Paste the token and give the repository as owner/name."; return; }
+    const oldToken = token, oldRepo = repo;
+    token = t; repo = r;
+    $("msg").className = "msg"; $("msg").textContent = "Checking…";
+    try {
+      await gh("data/feed.json", {raw: true});
+    } catch (e) {
+      $("msg").className = "msg err"; $("msg").textContent = explain(e);
+      token = oldToken; repo = oldRepo;
+      return;
+    }
+    keep("token", token); keep("repo", repo);
+    syncError = "";
+    render();
+    refresh();
+    flush();
+  };
+  if (token) {
+    loadFeeds();
+    $("feedform").onsubmit = (ev) => { ev.preventDefault(); addFeed(); };
+    $("cancel").onclick = () => render();
+    $("forget").onclick = () => { token = ""; drop("token"); setupView(); };
+  }
+}
+
+// ---------- sources (data/feeds.json) ----------
+let feeds = null;
+function writeFeeds(list) {
+  return list.length ? "[\n" + list.map((f) => " " + pyJson(f)).join(",\n") + "\n]\n" : "[]\n";
+}
+// ✓ when the feed has articles in the edition on screen; ✗ with the reason
+// when it hasn't.
+function feedStatus(f) {
+  const count = stories().reduce((n, s) => n + s.sources.filter((src) => src.feed === f.name).length, 0);
+  if (count) return {ok: true, why: `${count} article${count > 1 ? "s" : ""} in this edition`};
+  if (!feed) return {ok: false, why: "No edition loaded"};
+  const failed = (feed.failed || []).find((x) => x.url === f.url);
+  if (failed) return {ok: false, why: "Couldn't be read: " + (failed.error || "unknown error")};
+  const added = (load("feedAdded", {}))[f.url];
+  const tried = feed.feeds ? feed.feeds.includes(f.url) : !(added && added > feed.rendered_at);
+  if (!tried) return {ok: false, why: "Added after this morning's scrape; first read tomorrow"};
+  return {ok: false, why: "Inactive: no new articles since the last scrape"};
+}
+function drawFeeds() {
+  const el = $("feedlist");
+  if (!el) return;
+  el.innerHTML = !feeds ? "<li><div>Couldn't load the feed list.</div></li>"
+    : !feeds.length ? "<li><div>No feeds yet.</div></li>"
+    : feeds.map((f, i) => {
+      const st = feedStatus(f);
+      return `<li><span class="mark ${st.ok ? "yes" : "no"}" title="${esc(st.why)}">${st.ok ? "✓" : "✗"}</span>
+        <div>${esc(f.name)}${st.ok ? "" : `<small class="why">${esc(st.why)}</small>`}<small>${esc(f.url)}</small></div>
+        <button type="button" data-remove-feed="${i}">Remove</button></li>`;
+    }).join("");
+}
+async function loadFeeds() {
+  try {
+    const file = await getFile("data/feeds.json");
+    feeds = file.text ? JSON.parse(file.text) : [];
+  } catch (e) {
+    feeds = null;
+    $("fmsg").className = "msg err"; $("fmsg").textContent = explain(e);
+  }
+  drawFeeds();
+}
+// Read the file fresh, change it, write it back; retried on a conflict.
+async function changeFeeds(change, message) {
+  await withRetry(async () => {
+    const file = await getFile("data/feeds.json");
+    const list = change(file.text ? JSON.parse(file.text) : []);
+    await putFile("data/feeds.json", writeFeeds(list), file.sha, message);
+    feeds = list;
+  });
+  drawFeeds();
+}
+async function addFeed() {
+  const name = $("fname").value.trim(), url = $("furl").value.trim();
+  const msg = $("fmsg");
+  msg.className = "msg err";
+  if (!name || !/^https?:\/\/\S+$/.test(url)) { msg.textContent = "Give the feed a name and a full address starting with https://."; return; }
+  if ((feeds || []).some((f) => f.url === url)) { msg.textContent = "That feed is already in the list."; return; }
+  msg.className = "msg"; msg.textContent = "Adding…";
+  try {
+    keep("feedAdded", {...load("feedAdded", {}), [url]: new Date().toISOString()});
+    await changeFeeds((list) => list.some((f) => f.url === url) ? list : [...list, {name, url}], "Viewer: add feed " + name);
+    $("fname").value = ""; $("furl").value = "";
+    msg.textContent = `Added ${name}.`;
+  } catch (e) {
+    msg.className = "msg err"; msg.textContent = explain(e);
+  }
+}
+async function removeFeed(btn) {
+  // First tap asks, second tap removes.
+  if (!btn.classList.contains("sure")) { btn.classList.add("sure"); btn.textContent = "Tap to remove"; return; }
+  const f = feeds[Number(btn.dataset.removeFeed)];
+  const msg = $("fmsg");
+  msg.className = "msg"; msg.textContent = "Removing…";
+  try {
+    await changeFeeds((list) => list.filter((x) => x.url !== f.url), "Viewer: remove feed " + f.name);
+    msg.textContent = `Removed ${f.name}.`;
+  } catch (e) {
+    msg.className = "msg err"; msg.textContent = explain(e);
+  }
+}
+
+// ---------- loading ----------
+let lastLoad = 0;
+async function refresh() {
+  if (!token) return;
+  lastLoad = Date.now();
+  try {
+    const [feedText, savedFile, readFile] = await Promise.all(
+      [gh("data/feed.json", {raw: true}), getFile("data/saved.json"), getFile("data/read.json")]);
+    readDays = mergeReads(readFile.text ? JSON.parse(readFile.text) : {}, []);
+    keep("readDays", readDays);
+    feed = JSON.parse(feedText);
+    keep("feed", feed);
+    // Pending saves aren't in the file yet; keep them on top of what it says.
+    if (!saveQueue.length) {
+      saved = savedFile.text ? JSON.parse(savedFile.text) : [];
+      keep("saved", saved);
+    }
+    prune();
+    if (!flushing && !(tagQueue.length + saveQueue.length + readQueue.length)) syncError = "";
+  } catch (e) {
+    syncError = (feed ? "Couldn't load the latest feed. " : "") + explain(e);
+    if (e.status === 401) { showSync(); return setupView(explain(e)); }
+  }
+  if (saved === null) saved = (feed && feed.saved ? [...feed.saved].reverse() : []);
+  render();
+  showSync();
+}
+// Highlights and undo records only matter for recent cards.
+function prune() {
+  const cutoff = budapestDay(new Date(Date.now() - KEEP_DAYS * 864e5));
+  const pending = new Set(tagQueue.map((op) => op.card));
+  for (const map of [ui, records]) {
+    for (const id of Object.keys(map)) {
+      if (id.slice(0, 10) < cutoff && !pending.has(id)) delete map[id];
+    }
+  }
+  keep("ui", ui);
+  keep("records", records);
+}
+
+// ---------- events ----------
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest("a,button");
+  if (!el) return;
+  const card = el.closest(".card");
+  const id = card?.dataset.id;
+  if (el.dataset.removeFeed) return removeFeed(el);
+  if (el.dataset.open) return opened(el.dataset.open, el.getAttribute("href"));
+  if (el.dataset.tab) { tab = el.dataset.tab; render(); return; }
+  if (el.hasAttribute("data-toggle")) return toggleSources(card);
+  if (el.dataset.vote && id) return vote(id, el.dataset.vote);
+  if (el.hasAttribute("data-save") && id) {
+    const story = findStory(id);
+    if (story) { const s = saveTarget(story); toggleSave(s.title, s.link); }
+    return;
+  }
+  if (el.dataset.unsave) {
+    const item = (saved || []).find((s) => s && s.link === el.dataset.unsave);
+    if (item) toggleSave(item.title, item.link);
+  }
+});
+// Middle click opens a link in a new tab without a click event.
+document.addEventListener("auxclick", (ev) => {
+  const a = ev.target.closest("a[data-open]");
+  if (a && ev.button === 1) opened(a.dataset.open, a.getAttribute("href"));
+});
+$("settings").onclick = () => (inSettings ? render() : setupView());
+window.addEventListener("online", flush);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !token) return;
+  flush();
+  if (Date.now() - lastLoad > 15 * 60 * 1000) refresh();
+});
+
+render();
+showSync();
+if (token) { refresh(); flush(); }
+</script>
+</body>
+</html>
