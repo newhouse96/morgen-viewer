@@ -46,7 +46,12 @@ button.hl .n{font-weight:400;font-size:13px;color:var(--accent);white-space:nowr
 .tag{background:var(--chip);border-radius:6px;padding:2px 7px}.tag b{font-weight:600;color:var(--accent)}
 button.tag{border:0;font:inherit;color:inherit;cursor:pointer}
 button.tag:hover,button.tag.on{outline:1px solid var(--accent)}
-.search{position:relative;margin-left:auto;flex:0 1 230px;min-width:0}
+.view{margin-left:auto;flex:none;font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--text);cursor:pointer}
+.search{position:relative;flex:0 1 230px;min-width:0}
+@media (max-width:420px){.tabs{gap:6px}.tabs button{padding:6px 11px}.view{padding:6px 2px}.search{min-width:96px}.search input{padding:6px 10px}}
+h3.group{display:flex;gap:8px;align-items:baseline;font-size:15px;margin:22px 0 10px}
+h3.group:first-child,.filter+h3.group,.note+h3.group{margin-top:4px}
+h3.group .c{font-weight:400;font-size:13px;color:var(--muted)}
 .search input{width:100%;font:inherit;font-size:14px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--text)}
 .search input:focus{outline:none;border-color:var(--accent)}
 .drop{position:absolute;right:0;top:calc(100% + 6px);z-index:5;width:min(340px,calc(100vw - 32px));max-height:min(420px,70vh);overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:6px 0;font-size:14px}
@@ -112,8 +117,12 @@ a{color:var(--accent)}
   <div class="tabs" id="bar" hidden>
     <button data-tab="today">Today</button>
     <button data-tab="saved">Saved</button>
+    <select class="view" id="view" aria-label="View">
+      <option value="default">Default</option>
+      <option value="grouped">Grouped</option>
+    </select>
     <div class="search">
-      <input id="q" type="search" placeholder="Search tags" autocomplete="off" aria-label="Search tags">
+      <input id="q" type="search" placeholder="Search" autocomplete="off" aria-label="Search tags">
       <div class="drop" id="drop" hidden></div>
     </div>
   </div>
@@ -164,6 +173,7 @@ let saveQueue = load("saveQueue", []);  // saves and removals not yet committed
 let readDays = load("readDays", {});    // data/read.json: {day: [links read]}, shared by devices
 let readQueue = load("readQueue", []);  // [{day, link}] not yet committed
 let tab = "today";
+let view = load("view", "default");   // "default" (ranked) or "grouped" (by tag)
 const picked = new Set();  // tags ticked in the search list or tapped on a card; not kept across visits
 let syncError = "";
 
@@ -557,6 +567,29 @@ function clearTags() {
   picked.clear();
   render();
 }
+// Grouped view: each card goes under its tag that the most cards share (ticked
+// tags aside, since every card has them), biggest groups first. Cards left
+// alone in their group go under Other.
+function groupedHtml(cards) {
+  const counts = {};
+  for (const s of cards) for (const t of tagNames(s)) if (!picked.has(t)) counts[t] = (counts[t] || 0) + 1;
+  const groups = new Map();
+  for (const s of cards) {
+    let best = "";
+    for (const t of tagNames(s)) if (!picked.has(t) && (!best || counts[t] > counts[best])) best = t;
+    if (!groups.has(best)) groups.set(best, []);
+    groups.get(best).push(s);
+  }
+  const other = [];
+  const list = [];
+  for (const [t, group] of groups) {
+    if (t && group.length > 1) list.push([t, group]); else other.push(...group);
+  }
+  list.sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  if (other.length) list.push(["Other", other]);
+  return list.map(([t, group]) =>
+    `<h3 class="group">${esc(t)} <span class="c">${group.length}</span></h3>${group.map(cardHtml).join("")}`).join("");
+}
 function todayHtml() {
   if (!feed) return `<div class="empty">Loading the feed…</div>`;
   const notes = [];
@@ -579,9 +612,10 @@ function todayHtml() {
     html += `<div class="filter">${n} card${n === 1 ? "" : "s"} with ${chips}${all}</div>`;
     if (!n) return html + `<div class="empty">Nothing today matches.</div>`;
   }
-  if (main.length) html += main.map(cardHtml).join("");
+  if (view === "grouped") html += groupedHtml([...main, ...also]);
+  else if (main.length) html += main.map(cardHtml).join("");
   else if (!filtering) html += `<div class="empty">Nothing ranked yet. Everything is under Also today.</div>`;
-  if (also.length) {
+  if (also.length && view !== "grouped") {
     const openAttr = main.length && !filtering ? "" : " open";
     html += `<details class="also"${openAttr}><summary>Also today (${also.length})</summary>${also.map(cardHtml).join("")}</details>`;
   }
@@ -837,6 +871,14 @@ document.addEventListener("auxclick", (ev) => {
 $("settings").onclick = () => (inSettings ? render() : setupView());
 $("q").addEventListener("focus", drawDrop);
 $("q").addEventListener("input", drawDrop);
+$("view").value = view;
+$("view").addEventListener("change", () => {
+  view = $("view").value;
+  keep("view", view);
+  tab = "today";
+  render();
+  window.scrollTo(0, 0);
+});
 $("q").addEventListener("keydown", (ev) => {
   if (ev.key === "Enter" || ev.key === "Escape") { closeDrop(); $("q").blur(); }
 });
