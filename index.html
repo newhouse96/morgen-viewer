@@ -115,6 +115,7 @@ a{color:var(--accent)}
 <main>
   <header>
     <h1>Morgen</h1>
+    <button class="icon" id="hideRead" hidden></button>
     <button class="icon" id="settings" title="Token and sources">Settings</button>
   </header>
   <div class="sub" id="sub"></div>
@@ -181,6 +182,7 @@ let tab = "today";
 // "grouped" (by tag, the default) or "ranked" (one list by score). Anything else,
 // like the old "default", means grouped.
 let view = load("view", "grouped") === "ranked" ? "ranked" : "grouped";
+let hideRead = load("hideRead", false);  // leave read cards out of Today
 const expanded = new Set();           // groups opened past their top three
 const GROUP_TOP = 3;
 const picked = new Set();  // tags ticked in the search list or tapped on a card; not kept across visits
@@ -495,7 +497,7 @@ function cardHtml(s) {
   const u = ui[s.id] || {};
   const read = isRead;
   // Grey once opened here or read on any device (data/read.json).
-  const seen = u.open || s.sources.some((src) => read(src.link)) ? " seen" : "";
+  const seen = u.open || cardRead(s) ? " seen" : "";
   const tick = (on) => on ? `<span class="read" title="Read">✓</span> ` : "";
   let head, list = "";
   if (s.sources.length === 1) {
@@ -548,7 +550,8 @@ function drawTabs() {
 // Lower case without accents, so "kozgazdasag" finds "#Kozgazdasag" and "kozg" finds both.
 function fold(s) { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
 // A card shows when it has every ticked tag.
-function matches(s) { const names = tagNames(s); return [...picked].every((t) => names.includes(t)); }
+function matches(s) { const names = tagNames(s); return [...picked].every((t) => names.includes(t)) && !(hideRead && cardRead(s)); }
+function cardRead(s) { return s.sources.some((src) => isRead(src.link)); }
 // Tags on the cards still showing, most used first, so every tag offered narrows
 // the feed further. Ticked tags stay listed so they can be unticked.
 function tagCounts() {
@@ -636,11 +639,14 @@ function todayHtml() {
   }
   if (view === "grouped") html += groupedHtml([...main, ...also]);
   else if (main.length) html += main.map(cardHtml).join("");
+  else if (!filtering && !also.length && hideRead) html += `<div class="empty">You've read everything today.</div>`;
   else if (!filtering) html += `<div class="empty">Nothing ranked yet. Everything is under Also today.</div>`;
   if (also.length && view !== "grouped") {
     const openAttr = main.length && !filtering ? "" : " open";
     html += `<details class="also"${openAttr}><summary>Also today (${also.length})</summary>${also.map(cardHtml).join("")}</details>`;
   }
+  const hidden = hideRead ? stories().filter(cardRead).length : 0;
+  if (hidden) html += `<p class="foot">${hidden} read card${hidden === 1 ? "" : "s"} hidden. <a href="#" data-hideread>Show them</a></p>`;
   const failed = (feed.failed || []).map((f) => f.name || f.url).filter(Boolean);
   if (failed.length) html += `<p class="foot">Failed this morning: ${failed.map(esc).join(", ")}.</p>`;
   return html;
@@ -676,6 +682,8 @@ function setHeader(settings) {
   inSettings = settings;
   $("settings").textContent = settings ? "Feed" : "Settings";
   $("settings").hidden = !token;
+  $("hideRead").hidden = settings || !token;
+  $("hideRead").textContent = hideRead ? "Show read" : "Hide read";
   $("bar").hidden = settings || !token;
   if (settings) closeDrop();
 }
@@ -879,6 +887,7 @@ document.addEventListener("click", (ev) => {
   if (el.dataset.tag) return toggleTag(el.dataset.tag);
   if (el.dataset.pick) return toggleTag(el.dataset.pick);
   if (el.hasAttribute("data-clear")) return clearTags();
+  if (el.hasAttribute("data-hideread")) { ev.preventDefault(); return toggleHideRead(); }
   if (el.dataset.expand) {
     const t = el.dataset.expand;
     if (expanded.has(t)) expanded.delete(t); else expanded.add(t);
@@ -915,6 +924,13 @@ document.addEventListener("auxclick", (ev) => {
 $("settings").onclick = () => (inSettings ? render() : setupView());
 $("q").addEventListener("focus", drawDrop);
 $("q").addEventListener("input", drawDrop);
+function toggleHideRead() {
+  hideRead = !hideRead;
+  keep("hideRead", hideRead);
+  tab = "today";
+  render();
+}
+$("hideRead").onclick = toggleHideRead;
 $("view").value = view;
 $("view").addEventListener("change", () => {
   view = $("view").value;
