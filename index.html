@@ -645,8 +645,6 @@ function todayHtml() {
     const openAttr = main.length && !filtering ? "" : " open";
     html += `<details class="also"${openAttr}><summary>Also today (${also.length})</summary>${also.map(cardHtml).join("")}</details>`;
   }
-  const hidden = hideRead ? stories().filter(cardRead).length : 0;
-  if (hidden) html += `<p class="foot">${hidden} read card${hidden === 1 ? "" : "s"} hidden. <a href="#" data-hideread>Show them</a></p>`;
   const failed = (feed.failed || []).map((f) => f.name || f.url).filter(Boolean);
   if (failed.length) html += `<p class="foot">Failed this morning: ${failed.map(esc).join(", ")}.</p>`;
   return html;
@@ -887,7 +885,6 @@ document.addEventListener("click", (ev) => {
   if (el.dataset.tag) return toggleTag(el.dataset.tag);
   if (el.dataset.pick) return toggleTag(el.dataset.pick);
   if (el.hasAttribute("data-clear")) return clearTags();
-  if (el.hasAttribute("data-hideread")) { ev.preventDefault(); return toggleHideRead(); }
   if (el.dataset.expand) {
     const t = el.dataset.expand;
     if (expanded.has(t)) expanded.delete(t); else expanded.add(t);
