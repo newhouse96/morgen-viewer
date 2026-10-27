@@ -52,6 +52,8 @@ button.tag:hover,button.tag.on{outline:1px solid var(--accent)}
 h3.group{display:flex;gap:8px;align-items:baseline;font-size:15px;margin:22px 0 10px}
 h3.group:first-child,.filter+h3.group,.note+h3.group{margin-top:4px}
 h3.group .c{font-weight:400;font-size:13px;color:var(--muted)}
+h3.group button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+h3.group button:hover{color:var(--accent)}
 .more{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin:-2px 0 6px;padding:4px;background:none;border:0;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
 .more:hover{color:var(--accent)}
 .more svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -603,7 +605,8 @@ function groupedHtml(cards) {
       ? `<button class="more" data-expand="${esc(t)}" aria-expanded="${open}">${open ? "Show fewer" : `Show all ${group.length}`}
           <svg viewBox="0 0 24 24"><path d="${open ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"}"/></svg></button>`
       : "";
-    return `<h3 class="group">${esc(t)} <span class="c">${group.length}</span></h3>${shown.map(cardHtml).join("")}${more}`;
+    const title = t === "Other" ? esc(t) : `<button data-tag="${esc(t)}" title="Filter by ${esc(t)}">${esc(t)}</button>`;
+    return `<h3 class="group" data-group="${esc(t)}">${title} <span class="c">${group.length}</span></h3>${shown.map(cardHtml).join("")}${more}`;
   }).join("");
 }
 function todayHtml() {
@@ -868,7 +871,7 @@ document.addEventListener("click", (ev) => {
     render();
     // Folding a long group back up: bring its heading back into view.
     if (!expanded.has(t)) {
-      const h = [...document.querySelectorAll("h3.group")].find((x) => x.firstChild.textContent.trim() === t);
+      const h = document.querySelector(`h3.group[data-group="${CSS.escape(t)}"]`);
       if (h && h.getBoundingClientRect().top < 0) h.scrollIntoView({block: "start"});
     }
     return;
