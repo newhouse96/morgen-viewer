@@ -52,6 +52,9 @@ button.tag:hover,button.tag.on{outline:1px solid var(--accent)}
 h3.group{display:flex;gap:8px;align-items:baseline;font-size:15px;margin:22px 0 10px}
 h3.group:first-child,.filter+h3.group,.note+h3.group{margin-top:4px}
 h3.group .c{font-weight:400;font-size:13px;color:var(--muted)}
+.more{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin:-2px 0 6px;padding:4px;background:none;border:0;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+.more:hover{color:var(--accent)}
+.more svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .search input{width:100%;font:inherit;font-size:14px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--text)}
 .search input:focus{outline:none;border-color:var(--accent)}
 .drop{position:absolute;right:0;top:calc(100% + 6px);z-index:5;width:min(340px,calc(100vw - 32px));max-height:min(420px,70vh);overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:6px 0;font-size:14px}
@@ -174,6 +177,8 @@ let readDays = load("readDays", {});    // data/read.json: {day: [links read]}, 
 let readQueue = load("readQueue", []);  // [{day, link}] not yet committed
 let tab = "today";
 let view = load("view", "default");   // "default" (ranked) or "grouped" (by tag)
+const expanded = new Set();           // groups opened past their top three
+const GROUP_TOP = 3;
 const picked = new Set();  // tags ticked in the search list or tapped on a card; not kept across visits
 let syncError = "";
 
@@ -569,7 +574,8 @@ function clearTags() {
 }
 // Grouped view: each card goes under its tag that the most cards share (ticked
 // tags aside, since every card has them), biggest groups first. Cards left
-// alone in their group go under Other.
+// alone in their group go under Other. A group shows its three highest scoring
+// cards until its arrow is tapped.
 function groupedHtml(cards) {
   const counts = {};
   for (const s of cards) for (const t of tagNames(s)) if (!picked.has(t)) counts[t] = (counts[t] || 0) + 1;
@@ -587,8 +593,16 @@ function groupedHtml(cards) {
   }
   list.sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
   if (other.length) list.push(["Other", other]);
-  return list.map(([t, group]) =>
-    `<h3 class="group">${esc(t)} <span class="c">${group.length}</span></h3>${group.map(cardHtml).join("")}`).join("");
+  return list.map(([t, group]) => {
+    group = [...group].sort((a, b) => b.score - a.score);
+    const open = expanded.has(t);
+    const shown = open ? group : group.slice(0, GROUP_TOP);
+    const more = group.length > GROUP_TOP
+      ? `<button class="more" data-expand="${esc(t)}" aria-expanded="${open}">${open ? "Show fewer" : `Show all ${group.length}`}
+          <svg viewBox="0 0 24 24"><path d="${open ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"}"/></svg></button>`
+      : "";
+    return `<h3 class="group">${esc(t)} <span class="c">${group.length}</span></h3>${shown.map(cardHtml).join("")}${more}`;
+  }).join("");
 }
 function todayHtml() {
   if (!feed) return `<div class="empty">Loading the feed…</div>`;
@@ -846,6 +860,17 @@ document.addEventListener("click", (ev) => {
   if (el.dataset.tag) return toggleTag(el.dataset.tag);
   if (el.dataset.pick) return toggleTag(el.dataset.pick);
   if (el.hasAttribute("data-clear")) return clearTags();
+  if (el.dataset.expand) {
+    const t = el.dataset.expand;
+    if (expanded.has(t)) expanded.delete(t); else expanded.add(t);
+    render();
+    // Folding a long group back up: bring its heading back into view.
+    if (!expanded.has(t)) {
+      const h = [...document.querySelectorAll("h3.group")].find((x) => x.firstChild.textContent.trim() === t);
+      if (h && h.getBoundingClientRect().top < 0) h.scrollIntoView({block: "start"});
+    }
+    return;
+  }
   const card = el.closest(".card");
   const id = card?.dataset.id;
   if (el.dataset.removeFeed) return removeFeed(el);
