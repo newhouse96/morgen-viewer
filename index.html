@@ -527,12 +527,14 @@ function drawTabs() {
 // ---------- tag filter ----------
 // Lower case without accents, so "kozgazdasag" finds "#Kozgazdasag" and "kozg" finds both.
 function fold(s) { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
-// A card shows when it has any ticked tag.
-function matches(s) { return !picked.size || tagNames(s).some((t) => picked.has(t)); }
-// Today's tags, most used first.
+// A card shows when it has every ticked tag.
+function matches(s) { const names = tagNames(s); return [...picked].every((t) => names.includes(t)); }
+// Tags on the cards still showing, most used first, so every tag offered narrows
+// the feed further. Ticked tags stay listed so they can be unticked.
 function tagCounts() {
   const counts = {};
-  for (const s of stories()) for (const t of tagNames(s)) counts[t] = (counts[t] || 0) + 1;
+  for (const t of picked) counts[t] = 0;
+  for (const s of stories().filter(matches)) for (const t of tagNames(s)) counts[t] = (counts[t] || 0) + 1;
   return Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 function drawDrop() {
