@@ -177,6 +177,7 @@ let readDays = load("readDays", {});    // data/read.json: {day: [links read]}, 
 let readQueue = load("readQueue", []);  // [{day, link}] not yet committed
 let tab = "today";
 let view = load("view", "default");   // "default" (ranked) or "grouped" (by tag)
+let weights = load("weights", {});     // tag weights from data/tags.json at the last load
 const expanded = new Set();           // groups opened past their top three
 const GROUP_TOP = 3;
 const picked = new Set();  // tags ticked in the search list or tapped on a card; not kept across visits
@@ -573,7 +574,8 @@ function clearTags() {
   render();
 }
 // Grouped view: each card goes under its tag that the most cards share (ticked
-// tags aside, since every card has them), biggest groups first. Cards left
+// tags aside, since every card has them). Groups are ordered by tag weight,
+// taking taps since the feed was built into account, then by size. Cards left
 // alone in their group go under Other. A group shows its three highest scoring
 // cards until its arrow is tapped.
 function groupedHtml(cards) {
@@ -591,7 +593,8 @@ function groupedHtml(cards) {
   for (const [t, group] of groups) {
     if (t && group.length > 1) list.push([t, group]); else other.push(...group);
   }
-  list.sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  const weightOf = (t) => t in weights ? weights[t] : (cards.flatMap((s) => s.tags).find((x) => x.tag === t)?.weight || 0);
+  list.sort((a, b) => weightOf(b[0]) - weightOf(a[0]) || b[1].length - a[1].length || a[0].localeCompare(b[0]));
   if (other.length) list.push(["Other", other]);
   return list.map(([t, group]) => {
     group = [...group].sort((a, b) => b.score - a.score);
@@ -818,8 +821,13 @@ async function refresh() {
   if (!token) return;
   lastLoad = Date.now();
   try {
-    const [feedText, savedFile, readFile] = await Promise.all(
-      [gh("data/feed.json", {raw: true}), getFile("data/saved.json"), getFile("data/read.json")]);
+    const [feedText, savedFile, readFile, tagsFile] = await Promise.all(
+      [gh("data/feed.json", {raw: true}), getFile("data/saved.json"), getFile("data/read.json"), getFile("data/tags.json")]);
+    weights = {};
+    for (const [name, t] of Object.entries(tagsFile.text ? JSON.parse(tagsFile.text) : {})) {
+      weights[name] = typeof t === "object" && t !== null ? Number(t.weight) || 0 : Number(t) || 0;
+    }
+    keep("weights", weights);
     readDays = mergeReads(readFile.text ? JSON.parse(readFile.text) : {}, []);
     keep("readDays", readDays);
     feed = JSON.parse(feedText);
