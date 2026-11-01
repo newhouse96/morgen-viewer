@@ -637,7 +637,7 @@ function todayHtml() {
     notes.push(`This is the feed from ${esc(niceDay(feed.date))}. Today's isn't ready yet.`);
   }
   if (feed.tagged === false) {
-    notes.push("Claude hadn't tagged today's articles when this feed was built, so they are untagged and in arrival order.");
+    notes.push("Today's articles hadn't been tagged when this feed was built, so they are untagged and in arrival order.");
   }
   if (!persistent) {
     notes.push("This browser isn't keeping data for this page, so the token and the tap highlights are lost when it closes.");
