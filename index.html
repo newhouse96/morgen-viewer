@@ -183,6 +183,7 @@ let tab = "today";
 let view = load("view", "grouped") === "ranked" ? "ranked" : "grouped";
 const expanded = new Set();           // groups opened past their top three
 const GROUP_TOP = 3;
+const ROUNDUP = "#Roundup";           // kept out of the ranking, pinned before Other
 const picked = new Set();  // tags ticked in the search list or tapped on a card; not kept across visits
 let syncError = "";
 
@@ -597,26 +598,31 @@ function clearTags() {
 }
 // Grouped view: each card goes under its tag that the most cards share (ticked
 // tags aside, since every card has them). Groups are ordered by the sum of
-// their cards' scores, so both weight and size count. Cards left
-// alone in their group go under Other. A group shows its three highest scoring
-// cards until its arrow is tapped.
+// their cards' scores, so both weight and size count. Cards left alone in
+// their group go under Other. Roundups always form their own group, even when
+// there is only one, and are pinned just before Other regardless of weight.
 function groupedHtml(cards) {
   const counts = {};
   for (const s of cards) for (const t of tagNames(s)) if (!picked.has(t)) counts[t] = (counts[t] || 0) + 1;
   const groups = new Map();
   for (const s of cards) {
     let best = "";
-    for (const t of tagNames(s)) if (!picked.has(t) && (!best || counts[t] > counts[best])) best = t;
+    if (tagNames(s).includes(ROUNDUP)) best = ROUNDUP;
+    else for (const t of tagNames(s)) if (!picked.has(t) && (!best || counts[t] > counts[best])) best = t;
     if (!groups.has(best)) groups.set(best, []);
     groups.get(best).push(s);
   }
   const other = [];
   const list = [];
+  let roundup = null;
   for (const [t, group] of groups) {
-    if (t && group.length > 1) list.push([t, group]); else other.push(...group);
+    if (t === ROUNDUP) roundup = [t, group];
+    else if (t && group.length > 1) list.push([t, group]);
+    else other.push(...group);
   }
   const total = (group) => group.reduce((sum, s) => sum + (s.score || 0), 0);
   list.sort((a, b) => total(b[1]) - total(a[1]) || b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  if (roundup) list.push(roundup);
   if (other.length) list.push(["Other", other]);
   return list.map(([t, group]) => {
     group = [...group].sort((a, b) => b.score - a.score);
