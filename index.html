@@ -99,7 +99,9 @@ details.also>summary{cursor:pointer;font-weight:600;margin:22px 0 10px}
 .setup button.plain{background:none;color:var(--text);border-color:var(--line)}
 .setup+.setup{margin-top:14px}
 .feeds{list-style:none;padding:0;margin:10px 0 0}
-.feeds li{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.feeds li{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.feeds input.lang{flex:0 1 132px;min-width:96px;width:auto;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
+.feeds .hint{display:block;color:var(--muted);font-size:13px;line-height:1.4;margin-top:8px}
 .feeds li div{flex:1;min-width:0}
 .feeds small.why{color:var(--bad)}
 .mark{flex:none;width:18px;text-align:center;font-weight:700}.mark.yes{color:var(--good)}.mark.no{color:var(--bad)}
@@ -139,6 +141,10 @@ a{color:var(--accent)}
 const API = "https://api.github.com";
 const DEFAULT_REPO = "newhouse96/Morgen";
 const LIKE = 10, DISLIKE = -10, OPEN = 5, MAX_WEIGHT = 100;
+// Common targets offered on the Sources page; any language name is accepted.
+const LANGUAGES = ["English", "Hungarian", "German", "French", "Spanish", "Italian",
+  "Portuguese", "Dutch", "Polish", "Romanian", "Serbian", "Slovak", "Czech",
+  "Ukrainian", "Russian", "Turkish"];
 const KEEP_DAYS = 7;
 
 // ---------- storage ----------
@@ -515,13 +521,15 @@ function cardHtml(s) {
   // Grey once opened here or read on any device (data/read.json).
   const seen = u.open || cardRead(s) ? " seen" : "";
   const tick = (on) => on ? `<span class="read" title="Read">✓</span> ` : "";
+  const original = (text) => text ? ` title="Original: ${esc(text)}"` : "";
   let head, list = "";
   if (s.sources.length === 1) {
-    head = `<a class="hl${seen}" href="${esc(s.sources[0].link)}" target="_blank" rel="noopener noreferrer" data-open="${esc(s.id)}">${tick(read(s.sources[0].link))}${esc(s.headline)}</a>`;
+    const src = s.sources[0];
+    head = `<a class="hl${seen}" href="${esc(src.link)}" target="_blank" rel="noopener noreferrer" data-open="${esc(s.id)}"${original(src.original_title)}>${tick(read(src.link))}${esc(s.headline)}</a>`;
   } else {
     const items = s.sources.map((src) =>
-      `<li><a href="${esc(src.link)}" target="_blank" rel="noopener noreferrer" data-open="${esc(s.id)}">${tick(read(src.link))}${esc(src.title)}</a> <span class="f">· ${esc(src.feed)}</span></li>`).join("");
-    head = `<button class="hl${seen}" data-toggle aria-expanded="false">${tick(s.sources.some((src) => read(src.link)))}${esc(s.headline)} <span class="n">${s.sources.length} sources</span></button>`;
+      `<li><a href="${esc(src.link)}" target="_blank" rel="noopener noreferrer" data-open="${esc(s.id)}"${original(src.original_title)}>${tick(read(src.link))}${esc(src.title)}</a> <span class="f">· ${esc(src.feed)}</span></li>`).join("");
+    head = `<button class="hl${seen}" data-toggle aria-expanded="false"${original(s.original_headline)}>${tick(s.sources.some((src) => read(src.link)))}${esc(s.headline)} <span class="n">${s.sources.length} sources</span></button>`;
     list = `<ul class="srcs" hidden>${items}</ul>`;
   }
   const tags = s.tags.map((t) =>
@@ -728,6 +736,8 @@ function setupView(message) {
   const feedForm = `<form class="setup" id="feedform" autocomplete="off">
     <strong>Sources</strong>
     <ul class="feeds" id="feedlist"><li><div>Loading…</div></li></ul>
+    <datalist id="languages">${LANGUAGES.map((l) => `<option value="${esc(l)}"></option>`).join("")}</datalist>
+    <small class="hint">Set a source's language to translate its titles and group headlines in the morning tagging run; leave it blank to keep the original.</small>
     <label for="fname">Add a feed: name</label>
     <input id="fname" placeholder="Shown on cards, e.g. Telex">
     <label for="furl">RSS or news sitemap address</label>
@@ -791,6 +801,7 @@ function drawFeeds() {
       const st = feedStatus(f);
       return `<li><span class="mark ${st.ok ? "yes" : "no"}" title="${esc(st.why)}">${st.ok ? "✓" : "✗"}</span>
         <div>${esc(f.name)}${st.ok ? "" : `<small class="why">${esc(st.why)}</small>`}<small>${esc(f.url)}</small></div>
+        <input class="lang" list="languages" data-translate-feed="${esc(f.url)}" value="${esc(f.translate_to || "")}" placeholder="Original" aria-label="Translate ${esc(f.name)} to" title="Translate this source into" autocomplete="off" spellcheck="false">
         <button type="button" data-remove-feed="${i}">Remove</button></li>`;
     }).join("");
 }
@@ -841,6 +852,28 @@ async function removeFeed(btn) {
     msg.textContent = `Removed ${f.name}.`;
   } catch (e) {
     msg.className = "msg err"; msg.textContent = explain(e);
+  }
+}
+async function setFeedTranslation(input) {
+  const f = (feeds || []).find((x) => x.url === input.dataset.translateFeed);
+  if (!f) return;
+  const to = input.value.trim();
+  if ((f.translate_to || "") === to) { input.value = to; return; }
+  const msg = $("fmsg");
+  msg.className = "msg"; msg.textContent = to ? `Translating ${f.name} to ${to}…` : `Turning translation off for ${f.name}…`;
+  try {
+    await changeFeeds((list) => list.map((x) => {
+      if (x.url !== f.url) return x;
+      const next = {...x};
+      if (to) next.translate_to = to; else delete next.translate_to;
+      return next;
+    }), to ? `Viewer: translate ${f.name} to ${to}` : `Viewer: stop translating ${f.name}`);
+    msg.textContent = to
+      ? `${f.name} will be translated to ${to} at the next tagging run.`
+      : `${f.name} stays in its original language.`;
+  } catch (e) {
+    msg.className = "msg err"; msg.textContent = explain(e);
+    drawFeeds();
   }
 }
 
@@ -896,6 +929,18 @@ function prune() {
 }
 
 // ---------- events ----------
+document.addEventListener("change", (ev) => {
+  if (!(ev.target instanceof Element)) return;
+  const input = ev.target.closest("input[data-translate-feed]");
+  if (input) setFeedTranslation(input);
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" && ev.target instanceof Element
+      && ev.target.matches("input[data-translate-feed]")) {
+    ev.preventDefault();
+    setFeedTranslation(ev.target);
+  }
+});
 document.addEventListener("click", (ev) => {
   if (!ev.target.closest(".search")) closeDrop();
   const el = ev.target.closest("a,button");
