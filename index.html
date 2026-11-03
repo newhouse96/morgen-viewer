@@ -54,7 +54,7 @@ h3.group:first-child,.filter+h3.group,.note+h3.group{margin-top:4px}
 h3.group .c{font-weight:400;font-size:13px;color:var(--muted)}
 h3.group button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
 h3.group button:hover{color:var(--accent)}
-h3.group .expand{display:flex;align-self:center;align-items:center;margin-left:auto;padding:2px;background:none;border:0;color:var(--muted);font:inherit;cursor:pointer}
+h3.group .expand{display:flex;align-self:center;align-items:center;padding:2px;background:none;border:0;color:var(--muted);font:inherit;cursor:pointer}
 h3.group .expand:hover{color:var(--accent)}
 h3.group .expand svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
 h3.group .expand[aria-expanded="true"] svg{transform:rotate(180deg)}
@@ -642,7 +642,7 @@ function groupedHtml(cards) {
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`
       : "";
     const title = t === "Other" ? esc(t) : `<button data-tag="${esc(t)}" title="Filter by ${esc(t)}">${esc(t)}</button>`;
-    return `<h3 class="group" data-group="${esc(t)}">${title} <span class="c">${group.length}</span>${expand}</h3>${shown.map(cardHtml).join("")}`;
+    return `<h3 class="group" data-group="${esc(t)}">${title} ${expand} <span class="c">${group.length}</span></h3>${shown.map(cardHtml).join("")}`;
   }).join("");
 }
 function todayHtml() {
