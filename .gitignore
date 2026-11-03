@@ -1,0 +1,10 @@
+# Private Morgen data and analysis must not be published here.
+review/
+REVIEW.md
+
+# Local tooling
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+Thumbs.db
