@@ -146,7 +146,7 @@ a{color:var(--accent)}
 
 const API = "https://api.github.com";
 const DEFAULT_REPO = "newhouse96/Morgen";
-const LIKE = 10, DISLIKE = -10, OPEN = 5, MAX_WEIGHT = 100;
+const LIKE = 15, DISLIKE = -10, OPEN = 8, MAX_WEIGHT = 100;
 // Common targets offered on the Sources page; any language name is accepted.
 const LANGUAGES = ["English", "Hungarian", "German", "French", "Spanish", "Italian",
   "Portuguese", "Dutch", "Polish", "Romanian", "Serbian", "Slovak", "Czech",
@@ -584,7 +584,7 @@ function vote(id, kind) {
   flush();
 }
 // Mark the article read (data/read.json, so every device sees it) and count the first
-// open of each card as +5.
+// open of each card as +8.
 function opened(id, link) {
   const story = findStory(id);
   if (!story) return;
