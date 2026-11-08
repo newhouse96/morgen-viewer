@@ -105,12 +105,19 @@ details.also>summary{cursor:pointer;font-weight:600;margin:22px 0 10px}
 .setup button.plain{background:none;color:var(--text);border-color:var(--line)}
 .setup+.setup{margin-top:14px}
 .feeds{list-style:none;padding:0;margin:10px 0 0}
-.feeds li{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.feeds li{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line)}
 .feeds input.lang{flex:0 1 132px;min-width:96px;width:auto;font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
 .feeds .hint{display:block;color:var(--muted);font-size:13px;line-height:1.4;margin-top:8px}
 .feeds li div{flex:1;min-width:0}
+.feeds .srcname{font-weight:600}
+.feeds .count{color:var(--muted);font-size:13px;margin-left:6px}
+.feeds ul.urls{list-style:none;padding:0;margin:2px 0 0}
+.feeds ul.urls li{display:flex;gap:8px;align-items:center;padding:0;border:0}
+.feeds ul.urls small{flex:1;min-width:0}
+.feeds ul.urls button{flex:none}
 .feeds small.why{color:var(--bad)}
-.mark{flex:none;width:18px;text-align:center;font-weight:700}.mark.yes{color:var(--good)}.mark.no{color:var(--bad)}
+.feeds small.warn{display:block;color:var(--warn)}
+.mark{flex:none;width:18px;text-align:center;font-weight:700;margin-top:2px}.mark.yes{color:var(--good)}.mark.no{color:var(--bad)}.mark.warn{color:var(--warn)}
 .feeds li small{display:block;color:var(--muted);overflow-wrap:anywhere}
 .setup .feeds button{background:none;color:var(--muted);border:1px solid var(--line);padding:3px 10px;font-size:13px}
 .setup .feeds button.sure{color:var(--bad);border-color:var(--bad)}
@@ -146,7 +153,7 @@ a{color:var(--accent)}
 
 const API = "https://api.github.com";
 const DEFAULT_REPO = "newhouse96/Morgen";
-const LIKE = 10, DISLIKE = -10, OPEN = 5, MAX_WEIGHT = 100;
+const LIKE = 15, DISLIKE = -10, OPEN = 8, MAX_WEIGHT = 100;
 // Common targets offered on the Sources page; any language name is accepted.
 const LANGUAGES = ["English", "Hungarian", "German", "French", "Spanish", "Italian",
   "Portuguese", "Dutch", "Polish", "Romanian", "Serbian", "Slovak", "Czech",
@@ -584,7 +591,7 @@ function vote(id, kind) {
   flush();
 }
 // Mark the article read (data/read.json, so every device sees it) and count the first
-// open of each card as +5.
+// open of each card as +8.
 function opened(id, link) {
   const story = findStory(id);
   if (!story) return;
@@ -602,9 +609,23 @@ function opened(id, link) {
   showSync();
   flush();
 }
+// A card can list the same article twice when two feeds carry it; keep the
+// first source so the link is counted once.
+function storySources(story) {
+  const seen = new Set(), out = [];
+  for (const src of story.sources || []) {
+    if (!src) continue;
+    if (src.link) {
+      if (seen.has(src.link)) continue;
+      seen.add(src.link);
+    }
+    out.push(src);
+  }
+  return out;
+}
 // What a card saves: the article, or for a group the headline and first source.
 function saveTarget(story) {
-  const sources = story.sources || [];
+  const sources = storySources(story);
   return sources.length === 1
     ? {title: sources[0].title, link: sources[0].link}
     : {title: story.headline, link: sources[0]?.link || ""};
@@ -627,7 +648,7 @@ function toggleSave(title, link) {
 // ---------- drawing ----------
 function cardHtml(s) {
   const u = ui[s.id] || {};
-  const sources = s.sources || [];
+  const sources = storySources(s);
   // Grey once opened here or read on any device (data/read.json).
   const seen = u.open || cardRead(s) ? " seen" : "";
   const tick = (on) => on ? `<span class="read" title="Read">✓</span> ` : "";
@@ -685,7 +706,7 @@ function drawTabs() {
 function fold(s) { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
 // A card shows when it has every ticked tag.
 function matches(s) { const names = tagNames(s); return [...picked].every((t) => names.includes(t)); }
-function cardRead(s) { return (s.sources || []).some((src) => isRead(src.link)); }
+function cardRead(s) { return storySources(s).some((src) => isRead(src.link)); }
 // Tags on the cards still showing, most used first, so every tag offered narrows
 // the feed further. Ticked tags stay listed so they can be unticked.
 function tagCounts() {
@@ -789,7 +810,14 @@ function todayHtml() {
     const openAttr = main.length && !filtering ? "" : " open";
     html += `<details class="also"${openAttr}><summary>Also today (${also.length})</summary>${also.map(cardHtml).join("")}</details>`;
   }
-  const failed = (Array.isArray(feed.failed) ? feed.failed : []).map((f) => f.name || f.url).filter(Boolean);
+  const failed = [];
+  const seenFailed = new Set();
+  for (const f of (Array.isArray(feed.failed) ? feed.failed : [])) {
+    const label = f.name || f.url;
+    if (!label || seenFailed.has(label)) continue;
+    seenFailed.add(label);
+    failed.push(label);
+  }
   if (failed.length) html += `<p class="foot">Failed this morning: ${failed.map(esc).join(", ")}.</p>`;
   return html;
 }
@@ -853,9 +881,11 @@ function setupView(message) {
     <strong>Sources</strong>
     <ul class="feeds" id="feedlist"><li><div>Loading…</div></li></ul>
     <datalist id="languages">${LANGUAGES.map((l) => `<option value="${esc(l)}"></option>`).join("")}</datalist>
+    <datalist id="sources"></datalist>
     <small class="hint">Set a source's language to translate its titles and group headlines in the morning tagging run; leave it blank to keep the original.</small>
     <label for="fname">Add a feed: name</label>
-    <input id="fname" placeholder="Shown on cards, e.g. Telex">
+    <input id="fname" list="sources" placeholder="Shown on cards, e.g. Telex">
+    <small class="hint">Pick an existing source name to add another RSS or news sitemap address to it.</small>
     <label for="furl">RSS or news sitemap address</label>
     <input id="furl" type="url" placeholder="https://…" spellcheck="false">
     <div class="row"><button type="submit">Add feed</button></div>
@@ -911,17 +941,53 @@ let feeds = null;
 function writeFeeds(list) {
   return list.length ? "[\n" + list.map((f) => " " + pyJson(f)).join(",\n") + "\n]\n" : "[]\n";
 }
-// ✓ when the feed has articles in the edition on screen; ✗ with the reason
-// when it hasn't.
+// A source can have one address (`url`) or several (`urls`).
+function feedUrls(f) {
+  if (!f) return [];
+  if (Array.isArray(f.urls)) {
+    return f.urls.filter((u) => typeof u === "string" && u.trim()).map((u) => u.trim());
+  }
+  return typeof f.url === "string" && f.url.trim() ? [f.url.trim()] : [];
+}
+// Writes the short form for one address and the list form for several.
+function withFeedUrls(f, urls) {
+  const next = {...f};
+  if (urls.length === 1) {
+    next.url = urls[0];
+    delete next.urls;
+  } else {
+    next.urls = urls;
+    delete next.url;
+  }
+  return next;
+}
+// ✓ when the source has articles in the edition on screen; ! when some of its
+// addresses failed or are new; ✗ with the reason when none worked.
 function feedStatus(f) {
+  const urls = feedUrls(f);
+  if (!urls.length) return {ok: false, why: "No address set for this source"};
   const count = stories().reduce((n, s) => n + (s.sources || []).filter((src) => src.feed === f.name).length, 0);
-  if (count) return {ok: true, why: `${count} article${count > 1 ? "s" : ""} in this edition`};
   if (!feed) return {ok: false, why: "No edition loaded"};
-  const failed = (Array.isArray(feed.failed) ? feed.failed : []).find((x) => x.url === f.url);
-  if (failed) return {ok: false, why: "Couldn't be read: " + (failed.error || "unknown error")};
-  const added = (load("feedAdded", {}) || {})[f.url];
-  const tried = Array.isArray(feed.feeds) ? feed.feeds.includes(f.url) : !(added && added > feed.rendered_at);
-  if (!tried) return {ok: false, why: "Added after this morning's scrape; first read tomorrow"};
+  const failed = (Array.isArray(feed.failed) ? feed.failed : []).filter((x) => urls.includes(x.url));
+  const added = load("feedAdded", {}) || {};
+  const tried = Array.isArray(feed.feeds)
+    ? urls.filter((url) => feed.feeds.includes(url))
+    : urls.filter((url) => !(added[url] && added[url] > feed.rendered_at));
+  const untried = urls.filter((url) => !tried.includes(url));
+  const failure = failed.map((x) => `${x.url} (${x.error || "unknown error"})`).join("; ");
+  if (count) {
+    const notes = [];
+    if (failed.length) notes.push(`${failed.length} of ${urls.length} links failed: ${failure}`);
+    if (untried.length) notes.push(`${untried.length} new link${untried.length === 1 ? "" : "s"} first read tomorrow`);
+    return {
+      ok: true,
+      warn: notes.length > 0,
+      why: `${count} article${count === 1 ? "" : "s"} in this edition` + (notes.length ? "; " + notes.join("; ") : ""),
+    };
+  }
+  if (failed.length === urls.length) return {ok: false, why: "Couldn't be read: " + failure};
+  if (failed.length) return {ok: false, why: `${failed.length} of ${urls.length} links failed: ${failure}`};
+  if (untried.length) return {ok: false, why: "Added after this morning's scrape; first read tomorrow"};
   return {ok: false, why: "Inactive: no new articles since the last scrape"};
 }
 function drawFeeds() {
@@ -929,13 +995,23 @@ function drawFeeds() {
   if (!el) return;
   el.innerHTML = !feeds ? "<li><div>Couldn't load the feed list.</div></li>"
     : !feeds.length ? "<li><div>No feeds yet.</div></li>"
-    : feeds.map((f, i) => {
+    : feeds.map((f) => {
       const st = feedStatus(f);
-      return `<li><span class="mark ${st.ok ? "yes" : "no"}" title="${esc(st.why)}">${st.ok ? "✓" : "✗"}</span>
-        <div>${esc(f.name)}${st.ok ? "" : `<small class="why">${esc(st.why)}</small>`}<small>${esc(f.url)}</small></div>
-        <input class="lang" list="languages" data-translate-feed="${esc(f.url)}" value="${esc(f.translate_to || "")}" placeholder="Original" aria-label="Translate ${esc(f.name)} to" title="Translate this source into" autocomplete="off" spellcheck="false">
-        <button type="button" data-remove-feed="${i}">Remove</button></li>`;
+      const urls = feedUrls(f);
+      const mark = st.ok ? (st.warn ? "warn" : "yes") : "no";
+      const icon = st.ok ? (st.warn ? "!" : "✓") : "✗";
+      const detail = !st.ok || st.warn
+        ? `<small class="${st.ok ? "warn" : "why"}">${esc(st.why)}</small>` : "";
+      const rows = urls.map((url) => `<li><small>${esc(url)}</small>
+        <button type="button" data-remove-url data-source="${esc(f.name)}" data-url="${esc(url)}">Remove</button></li>`).join("");
+      return `<li><span class="mark ${mark}" title="${esc(st.why)}">${icon}</span>
+        <div><span class="srcname">${esc(f.name)}</span>${urls.length > 1 ? `<span class="count">${urls.length} links</span>` : ""}${detail}
+        <ul class="urls">${rows}</ul></div>
+        <input class="lang" list="languages" data-translate-source="${esc(f.name)}" value="${esc(f.translate_to || "")}" placeholder="Original" aria-label="Translate ${esc(f.name)} to" title="Translate this source into" autocomplete="off" spellcheck="false">
+      </li>`;
     }).join("");
+  const names = $("sources");
+  if (names) names.innerHTML = (feeds || []).map((f) => `<option value="${esc(f.name)}"></option>`).join("");
 }
 async function loadFeeds() {
   try {
@@ -972,35 +1048,57 @@ async function addFeed() {
   const msg = $("fmsg");
   msg.className = "msg err";
   if (!name || !/^https?:\/\/\S+$/.test(url)) { msg.textContent = "Give the feed a name and a full address starting with https://."; return; }
-  if ((feeds || []).some((f) => f.url === url)) { msg.textContent = "That feed is already in the list."; return; }
+  const owner = (feeds || []).find((f) => feedUrls(f).includes(url));
+  if (owner) { msg.textContent = `That link is already under ${owner.name}.`; return; }
+  const existing = (feeds || []).find((f) => f.name.toLowerCase() === name.toLowerCase());
   msg.className = "msg"; msg.textContent = "Adding…";
   try {
-    const changed = await changeFeeds((list) => list.some((f) => f.url === url) ? list : [...list, {name, url}], "Viewer: add feed " + name);
-    if (!changed) { msg.textContent = "That feed is already in the list."; return; }
+    const changed = await changeFeeds((list) => {
+      const same = list.find((f) => f.name.toLowerCase() === name.toLowerCase());
+      if (same) return list.map((f) => f === same ? withFeedUrls(f, [...feedUrls(f), url]) : f);
+      return [...list, {name, url}];
+    }, `Viewer: add ${url} to ${existing ? existing.name : name}`);
+    if (!changed) { msg.textContent = "That link is already in the list."; return; }
     keep("feedAdded", {...(load("feedAdded", {}) || {}), [url]: new Date().toISOString()});
     drawFeeds();
     $("fname").value = ""; $("furl").value = "";
-    msg.textContent = `Added ${name}.`;
+    msg.textContent = existing ? `Added a link to ${existing.name}.` : `Added ${name}.`;
   } catch (e) {
     msg.className = "msg err"; msg.textContent = explain(e);
   }
 }
-async function removeFeed(btn) {
+async function removeFeedUrl(btn) {
   // First tap asks, second tap removes.
   if (!btn.classList.contains("sure")) { btn.classList.add("sure"); btn.textContent = "Tap to remove"; return; }
-  const f = (feeds || [])[Number(btn.dataset.removeFeed)];
+  const name = btn.dataset.source, url = btn.dataset.url;
   const msg = $("fmsg");
-  if (!f) { msg.className = "msg err"; msg.textContent = "That feed is no longer in the list."; return; }
+  if (!name || !url) { msg.className = "msg err"; msg.textContent = "That link is no longer in the list."; return; }
   msg.className = "msg"; msg.textContent = "Removing…";
   try {
-    const changed = await changeFeeds((list) => list.filter((x) => x.url !== f.url), "Viewer: remove feed " + f.name);
-    msg.textContent = changed ? `Removed ${f.name}.` : "That feed was already gone.";
+    const changed = await changeFeeds((list) => {
+      let found = false;
+      const next = [];
+      for (const f of list) {
+        if (f.name !== name || !feedUrls(f).includes(url)) { next.push(f); continue; }
+        found = true;
+        const left = feedUrls(f).filter((u) => u !== url);
+        if (left.length) next.push(withFeedUrls(f, left));
+      }
+      return found ? next : list;
+    }, `Viewer: remove ${url} from ${name}`);
+    if (!changed) { msg.textContent = "That link was already gone."; return; }
+    const added = {...(load("feedAdded", {}) || {})};
+    delete added[url];
+    keep("feedAdded", added);
+    const still = (feeds || []).some((f) => f.name === name);
+    msg.textContent = still ? `Removed a link from ${name}.` : `Removed ${name}.`;
   } catch (e) {
     msg.className = "msg err"; msg.textContent = explain(e);
   }
 }
 async function setFeedTranslation(input) {
-  const f = (feeds || []).find((x) => x.url === input.dataset.translateFeed);
+  const name = input.dataset.translateSource;
+  const f = (feeds || []).find((x) => x.name === name);
   if (!f) return;
   const to = input.value.trim();
   if ((f.translate_to || "") === to) { input.value = to; return; }
@@ -1008,7 +1106,7 @@ async function setFeedTranslation(input) {
   msg.className = "msg"; msg.textContent = to ? `Translating ${f.name} to ${to}…` : `Turning translation off for ${f.name}…`;
   try {
     await changeFeeds((list) => list.map((x) => {
-      if (x.url !== f.url) return x;
+      if (x.name !== name) return x;
       const next = {...x};
       if (to) next.translate_to = to; else delete next.translate_to;
       return next;
@@ -1088,13 +1186,13 @@ function prune() {
 // ---------- events ----------
 document.addEventListener("change", (ev) => {
   if (!(ev.target instanceof Element)) return;
-  const input = ev.target.closest("input[data-translate-feed]");
+  const input = ev.target.closest("input[data-translate-source]");
   if (input) setFeedTranslation(input);
 });
 document.addEventListener("keydown", (ev) => {
   if (ev.key === "Escape" && !$("drop").hidden) { closeDrop(); return; }
   if (ev.key === "Enter" && ev.target instanceof Element
-      && ev.target.matches("input[data-translate-feed]")) {
+      && ev.target.matches("input[data-translate-source]")) {
     ev.preventDefault();
     setFeedTranslation(ev.target);
   }
@@ -1120,7 +1218,7 @@ document.addEventListener("click", (ev) => {
   }
   const card = el.closest(".card");
   const id = card?.dataset.id;
-  if (el.dataset.removeFeed) return removeFeed(el);
+  if (el.hasAttribute("data-remove-url")) return removeFeedUrl(el);
   if (el.dataset.open) return opened(el.dataset.open, el.getAttribute("href"));
   if (el.dataset.tab) { tab = el.dataset.tab; render(); return; }
   if (el.hasAttribute("data-toggle")) return toggleSources(card);
