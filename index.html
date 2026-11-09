@@ -65,6 +65,9 @@ h3.group .expand[aria-expanded="true"] svg{transform:rotate(180deg)}
 .fold{display:flex;align-items:center;justify-content:center;width:100%;margin:-2px 0 10px;padding:4px;background:none;border:0;color:var(--muted);font:inherit;cursor:pointer}
 .fold:hover{color:var(--accent)}
 .fold svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.totop{display:flex;width:max-content;margin:18px auto 8px;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--muted);font:inherit;font-size:14px;cursor:pointer}
+.totop:hover{color:var(--accent)}
+.totop svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .search input{width:100%;font:inherit;font-size:14px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--text)}
 .search input:focus{outline:none;border-color:var(--accent)}
 .drop{position:absolute;right:0;top:calc(100% + 6px);z-index:5;width:min(340px,calc(100vw - 32px));max-height:min(420px,70vh);overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:6px 0;font-size:14px}
@@ -150,6 +153,10 @@ a{color:var(--accent)}
     </div>
   </div>
   <div id="app"></div>
+  <button class="totop" id="toTop" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
+    Back to top
+  </button>
 </main>
 <script>
 "use strict";
@@ -860,6 +867,7 @@ function setHeader(settings) {
   $("settings").textContent = settings ? "Feed" : "Settings";
   $("settings").hidden = !token;
   $("bar").hidden = settings || !token;
+  $("toTop").hidden = settings || !token;
   if (settings) closeDrop();
 }
 function setupView(message) {
@@ -1247,6 +1255,10 @@ document.addEventListener("auxclick", (ev) => {
   if (a && ev.button === 1) opened(a.dataset.open, a.getAttribute("href"));
 });
 $("settings").onclick = () => (inSettings ? render() : setupView());
+$("toTop").onclick = () => window.scrollTo({
+  top: 0,
+  behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+});
 $("q").addEventListener("focus", drawDrop);
 $("q").addEventListener("input", drawDrop);
 $("view").value = view;
