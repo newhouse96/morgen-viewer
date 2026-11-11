@@ -280,6 +280,7 @@ const expandedSources = new Set();    // feed groups opened past their top three
 const GROUP_TOP = 3;
 const ROUNDUP = "#Roundup";           // kept out of the ranking, pinned before Other
 const picked = new Set();  // tags ticked in the search list or tapped on a card; not kept across visits
+let pickedSource = "";     // feed selected from a by-source heading; not kept across visits
 let syncError = "";
 
 // ---------- small helpers ----------
@@ -546,8 +547,8 @@ function setUi(id, key, on) {
 }
 // Where the card sat when it was tapped, for the commit message, so the review
 // can relate taps to positions: "pos=4 view=grouped group=#Tag filter=#A,#B".
-// A by-source card records its feed, percent-encoded so names with spaces do
-// not break the token-based commit format.
+// By-source values (the card's feed and any source filter) are percent-encoded
+// so names with spaces do not break the token-based commit format.
 function tapContext(id, card = null) {
   const cards = [...document.querySelectorAll("#app article.card")];
   const el = card instanceof Element && cards.includes(card)
@@ -556,6 +557,7 @@ function tapContext(id, card = null) {
   const parts = [];
   if (i >= 0) parts.push("pos=" + (i + 1));
   parts.push("view=" + view);
+  if (pickedSource) parts.push("source=" + encodeURIComponent(pickedSource));
   if (el && (view === "grouped" || view === "source")) {
     let h = el.previousElementSibling;
     while (h && !h.matches("h3.group")) h = h.previousElementSibling;
@@ -742,8 +744,17 @@ function drawTabs() {
 // ---------- tag filter ----------
 // Lower case without accents, so "kozgazdasag" finds "#Kozgazdasag" and "kozg" finds both.
 function fold(s) { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
-// A card shows when it has every ticked tag.
-function matches(s) { const names = tagNames(s); return [...picked].every((t) => names.includes(t)); }
+// Distinct feed names a card belongs to; the by-source view groups by these.
+function storyFeeds(s) {
+  return new Set(storySources(s).map((src) => src.feed || "Other"));
+}
+// A card shows when it has every ticked tag and, in the by-source view, the
+// selected source.
+function matches(s) {
+  if (pickedSource && !storyFeeds(s).has(pickedSource)) return false;
+  const names = tagNames(s);
+  return [...picked].every((t) => names.includes(t));
+}
 function cardRead(s) { return storySources(s).some((src) => isRead(src.link)); }
 // Tags on the cards still showing, most used first, so every tag offered narrows
 // the feed further. Ticked tags stay listed so they can be unticked.
@@ -769,13 +780,20 @@ function toggleTag(t) {
   tab = "today";
   render();
 }
-function clearTags() {
+function toggleSourceFilter(name) {
+  pickedSource = pickedSource === name ? "" : name;
+  tab = "today";
+  render();
+}
+function clearFilters() {
   picked.clear();
+  pickedSource = "";
   render();
 }
 // One group heading, its top cards and the fold control. `openSet` holds the
-// expansion state for this kind of group; `feed` limits the cards to one source.
-function groupBlock(label, group, openSet, { showAll = false, tag = false, feed = "" } = {}) {
+// expansion state for this kind of group; `feed` limits the cards to one source,
+// and `source` makes the heading filter to that feed.
+function groupBlock(label, group, openSet, { showAll = false, tag = false, source = false, feed = "" } = {}) {
   group = [...group].sort((a, b) => (b.score || 0) - (a.score || 0));
   const open = openSet.has(label);
   const shown = showAll || open ? group : group.slice(0, GROUP_TOP);
@@ -783,9 +801,11 @@ function groupBlock(label, group, openSet, { showAll = false, tag = false, feed 
     ? `<button class="expand" data-expand="${esc(label)}" aria-expanded="${open}" aria-label="${open ? "Show fewer" : `Show all ${group.length}`}" title="${open ? "Show fewer" : `Show all ${group.length}`}">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`
     : "";
-  const title = tag && label !== "Other"
-    ? `<button data-tag="${esc(label)}" title="Filter by ${esc(label)}">${esc(label)}</button>`
-    : esc(label);
+  const title = source
+    ? `<button data-filter-source="${esc(label)}" aria-pressed="${pickedSource === label}" title="${pickedSource === label ? "Stop filtering by" : "Filter by"} ${esc(label)}">${esc(label)}</button>`
+    : tag && label !== "Other"
+      ? `<button data-tag="${esc(label)}" title="Filter by ${esc(label)}">${esc(label)}</button>`
+      : esc(label);
   const fold = !showAll && open && group.length > GROUP_TOP
     ? `<button class="fold" data-expand="${esc(label)}" aria-expanded="true" aria-label="Show fewer" title="Show fewer">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>`
@@ -824,11 +844,13 @@ function groupedHtml(cards, showAll = false) {
 }
 // By-source view: a card appears under every feed that carried it, but each
 // copy lists only that feed's articles (see cardHtml), so no link shows up in
-// two groups. Groups are ordered by the sum of their cards' scores.
+// two groups. Groups are ordered by the sum of their cards' scores; a picked
+// source limits the view to that feed.
 function sourceHtml(cards, showAll = false) {
   const groups = new Map();
   for (const s of cards) {
-    for (const feed of new Set(storySources(s).map((src) => src.feed || "Other"))) {
+    for (const feed of storyFeeds(s)) {
+      if (pickedSource && feed !== pickedSource) continue;
       if (!groups.has(feed)) groups.set(feed, []);
       groups.get(feed).push(s);
     }
@@ -837,7 +859,7 @@ function sourceHtml(cards, showAll = false) {
   const list = [...groups].sort((a, b) =>
     total(b[1]) - total(a[1]) || b[1].length - a[1].length || a[0].localeCompare(b[0]));
   return list.map(([feed, group]) =>
-    groupBlock(feed, group, expandedSources, {showAll, feed})).join("");
+    groupBlock(feed, group, expandedSources, {showAll, feed, source: true})).join("");
 }
 function todayHtml() {
   if (!feed) return `<div class="empty">Loading the feed…</div>`;
@@ -856,7 +878,7 @@ function todayHtml() {
     notes.push(`<details><summary>${problems.length} tagging problem${problems.length === 1 ? "" : "s"}</summary>
       <ul>${problems.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></details>`);
   }
-  const filtering = picked.size > 0;
+  const filtering = picked.size > 0 || pickedSource !== "";
   const main = (Array.isArray(feed.stories) ? feed.stories : []).filter(matches);
   const also = (Array.isArray(feed.also_today) ? feed.also_today : []).filter(matches);
   let html = notes.map((n) => `<div class="note">${n}</div>`).join("");
@@ -865,8 +887,12 @@ function todayHtml() {
     const count = view === "source"
       ? `${n} ${n === 1 ? "story" : "stories"}`
       : `${n} ${n === 1 ? "card" : "cards"}`;
-    const chips = [...picked].map((t) => `<button data-tag="${esc(t)}" title="Remove ${esc(t)}">${esc(t)} ✕</button>`).join("");
-    const all = picked.size > 1 ? `<button data-clear class="plain">Clear all</button>` : "";
+    const chips = [
+      pickedSource ? `<button data-filter-source="${esc(pickedSource)}" title="Remove ${esc(pickedSource)}">${esc(pickedSource)} ✕</button>` : "",
+      ...[...picked].map((t) => `<button data-tag="${esc(t)}" title="Remove ${esc(t)}">${esc(t)} ✕</button>`),
+    ].join("");
+    const filters = picked.size + (pickedSource ? 1 : 0);
+    const all = filters > 1 ? `<button data-clear class="plain">Clear all</button>` : "";
     html += `<div class="filter">${count} with ${chips}${all}</div>`;
     if (!n) return html + `<div class="empty">Nothing today matches.</div>`;
   }
@@ -988,6 +1014,7 @@ function setupView(message) {
     if (r !== oldRepo) {
       loadData();
       picked.clear();
+      pickedSource = "";
       expanded.clear();
       expandedSources.clear();
       tab = "today";
@@ -1272,9 +1299,10 @@ document.addEventListener("click", (ev) => {
   if (!ev.target.closest(".search")) closeDrop();
   const el = ev.target.closest("a,button");
   if (!el) return;
+  if (el.dataset.filterSource) return toggleSourceFilter(el.dataset.filterSource);
   if (el.dataset.tag) return toggleTag(el.dataset.tag);
   if (el.dataset.pick) return toggleTag(el.dataset.pick);
-  if (el.hasAttribute("data-clear")) return clearTags();
+  if (el.hasAttribute("data-clear")) return clearFilters();
   if (el.dataset.expand) {
     const t = el.dataset.expand;
     const openSet = view === "source" ? expandedSources : expanded;
@@ -1320,6 +1348,7 @@ $("q").addEventListener("input", drawDrop);
 $("view").value = view;
 $("view").addEventListener("change", () => {
   view = $("view").value;
+  if (view !== "source") pickedSource = "";
   keep("view", view);
   tab = "today";
   render();
