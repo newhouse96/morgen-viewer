@@ -146,6 +146,7 @@ a{color:var(--accent)}
     <select class="view" id="view" aria-label="View">
       <option value="grouped">Grouped</option>
       <option value="ranked">Ranked</option>
+      <option value="source">By source</option>
     </select>
     <div class="search">
       <input id="q" type="search" placeholder="Search" autocomplete="off" aria-label="Search tags">
@@ -215,9 +216,11 @@ let token = load("token", "");
 if (typeof token !== "string") token = "";
 let repo = load("repo", DEFAULT_REPO);
 if (typeof repo !== "string" || !repo) repo = DEFAULT_REPO;
-// "grouped" (by tag, the default) or "ranked" (one list by score). Anything else,
-// like the old "default", means grouped.
-let view = load("view", "grouped") === "ranked" ? "ranked" : "grouped";
+// "grouped" (by tag, the default), "ranked" (one list by score) or "source"
+// (by feed, with a card under every feed that carried it). Anything else, like
+// the old "default", means grouped.
+let view = load("view", "grouped");
+if (!["grouped", "ranked", "source"].includes(view)) view = "grouped";
 
 // One-time move of the old global keys to the default repo's namespace.
 function migrateLegacy() {
@@ -272,7 +275,8 @@ function loadData() {
 migrateLegacy();
 loadData();
 let tab = "today";
-const expanded = new Set();           // groups opened past their top three
+const expanded = new Set();           // tag groups opened past their top three
+const expandedSources = new Set();    // feed groups opened past their top three
 const GROUP_TOP = 3;
 const ROUNDUP = "#Roundup";           // kept out of the ranking, pinned before Other
 const picked = new Set();  // tags ticked in the search list or tapped on a card; not kept across visits
@@ -542,17 +546,24 @@ function setUi(id, key, on) {
 }
 // Where the card sat when it was tapped, for the commit message, so the review
 // can relate taps to positions: "pos=4 view=grouped group=#Tag filter=#A,#B".
-function tapContext(id) {
+// A by-source card records its feed, percent-encoded so names with spaces do
+// not break the token-based commit format.
+function tapContext(id, card = null) {
   const cards = [...document.querySelectorAll("#app article.card")];
-  const i = cards.findIndex((c) => c.dataset.id === id);
+  const el = card instanceof Element && cards.includes(card)
+    ? card : cards.find((c) => c.dataset.id === id) || null;
+  const i = el ? cards.indexOf(el) : -1;
   const parts = [];
   if (i >= 0) parts.push("pos=" + (i + 1));
   parts.push("view=" + view);
-  if (i >= 0 && view === "grouped") {
-    let h = cards[i].previousElementSibling;
+  if (el && (view === "grouped" || view === "source")) {
+    let h = el.previousElementSibling;
     while (h && !h.matches("h3.group")) h = h.previousElementSibling;
-    if (h) parts.push("group=" + h.dataset.group);
-  } else if (i >= 0 && cards[i].closest("details.also")) parts.push("also");
+    if (h) {
+      const group = h.dataset.group || "";
+      parts.push("group=" + (view === "source" ? encodeURIComponent(group) : group));
+    }
+  } else if (el && el.closest("details.also")) parts.push("also");
   if (picked.size) parts.push("filter=" + [...picked].join(","));
   return parts.join(" ");
 }
@@ -567,31 +578,32 @@ function focusTarget() {
   else if (el.hasAttribute("data-save")) selector = "[data-save]";
   else if (el.dataset.unsave) selector = `[data-unsave="${CSS.escape(el.dataset.unsave)}"]`;
   if (!selector) return null;
-  return {selector, cardId: card?.dataset.id || null};
+  return {selector, cardId: card?.dataset.id || null, feed: card?.dataset.feed || ""};
 }
 function restoreFocus(target) {
   if (!target) return;
   const scope = target.cardId
-    ? document.querySelector(`.card[data-id="${CSS.escape(target.cardId)}"]`)
+    ? [...document.querySelectorAll(`.card[data-id="${CSS.escape(target.cardId)}"]`)]
+      .find((c) => (c.dataset.feed || "") === (target.feed || "")) || null
     : document;
   const el = scope?.querySelector(target.selector) || document.querySelector(target.selector);
   if (el) el.focus();
 }
-function vote(id, kind) {
+function vote(id, kind, card = null) {
   const story = findStory(id);
   if (!story) return;
   const focus = focusTarget();
   const u = ui[id] || {};
   const other = kind === "like" ? "dislike" : "like";
   if (u[kind]) {
-    tagQueue.push({t: "undo", card: id, kind, ctx: tapContext(id)});
+    tagQueue.push({t: "undo", card: id, kind, ctx: tapContext(id, card)});
     setUi(id, kind, false);
   } else {
     if (u[other]) {
-      tagQueue.push({t: "undo", card: id, kind: other, ctx: tapContext(id)});
+      tagQueue.push({t: "undo", card: id, kind: other, ctx: tapContext(id, card)});
       setUi(id, other, false);
     }
-    tagQueue.push({t: "add", card: id, kind, tags: tagNames(story), delta: kind === "like" ? LIKE : DISLIKE, ctx: tapContext(id)});
+    tagQueue.push({t: "add", card: id, kind, tags: tagNames(story), delta: kind === "like" ? LIKE : DISLIKE, ctx: tapContext(id, card)});
     setUi(id, kind, true);
   }
   keep("tagQueue", tagQueue);
@@ -602,17 +614,17 @@ function vote(id, kind) {
 }
 // Mark the article read (data/read.json, so every device sees it) and count the first
 // open of each card as +8.
-function opened(id, link) {
+function opened(id, link, card = null) {
   const story = findStory(id);
   if (!story) return;
   const u = ui[id] || {};
   if (link && !isRead(link)) {
-    readQueue.push({day: id.slice(0, 10), link, card: id, ctx: tapContext(id)});
+    readQueue.push({day: id.slice(0, 10), link, card: id, ctx: tapContext(id, card)});
     keep("readQueue", readQueue);
     refreshCard(id);
   }
   if (u.open) return flush();
-  tagQueue.push({t: "add", card: id, kind: "open", tags: tagNames(story), delta: OPEN, ctx: tapContext(id)});
+  tagQueue.push({t: "add", card: id, kind: "open", tags: tagNames(story), delta: OPEN, ctx: tapContext(id, card)});
   setUi(id, "open", true);
   keep("tagQueue", tagQueue);
   refreshCard(id);
@@ -634,8 +646,11 @@ function storySources(story) {
   return out;
 }
 // What a card saves: the article, or for a group the headline and first source.
-function saveTarget(story) {
-  const sources = storySources(story);
+// In the by-source view `feed` keeps the target to that feed's articles.
+function saveTarget(story, feed = "") {
+  const all = storySources(story);
+  const own = feed ? all.filter((src) => (src.feed || "Other") === feed) : all;
+  const sources = own.length ? own : all;
   return sources.length === 1
     ? {title: sources[0].title, link: sources[0].link}
     : {title: story.headline, link: sources[0]?.link || ""};
@@ -656,9 +671,13 @@ function toggleSave(title, link) {
 }
 
 // ---------- drawing ----------
-function cardHtml(s) {
+// `feed` (by-source view) limits the card to that feed's articles, so a story
+// repeated under several feeds never shows the same link in two groups.
+function cardHtml(s, feed = "") {
   const u = ui[s.id] || {};
-  const sources = storySources(s);
+  const allSources = storySources(s);
+  const own = feed ? allSources.filter((src) => (src.feed || "Other") === feed) : allSources;
+  const sources = own.length ? own : allSources;
   // Grey once opened here or read on any device (data/read.json).
   const seen = u.open || cardRead(s) ? " seen" : "";
   const tick = (on) => on ? `<span class="read" title="Read">✓</span> ` : "";
@@ -666,17 +685,19 @@ function cardHtml(s) {
   let head, list = "";
   if (sources.length === 1) {
     const src = sources[0];
-    head = `<a class="hl${seen}" href="${esc(src.link)}" target="_blank" rel="noopener noreferrer" data-open="${esc(s.id)}"${original(src.original_title)}>${tick(isRead(src.link))}${esc(s.headline)}</a>`;
+    const orig = allSources.length === 1 ? src.original_title : s.original_headline;
+    head = `<a class="hl${seen}" href="${esc(src.link)}" target="_blank" rel="noopener noreferrer" data-open="${esc(s.id)}"${original(orig)}>${tick(isRead(src.link))}${esc(s.headline)}</a>`;
   } else {
     const items = sources.map((src) =>
-      `<li><a href="${esc(src.link)}" target="_blank" rel="noopener noreferrer" data-open="${esc(s.id)}"${original(src.original_title)}>${tick(isRead(src.link))}${esc(src.title)}</a> <span class="f">· ${esc(src.feed)}</span></li>`).join("");
-    head = `<button class="hl${seen}" data-toggle aria-expanded="false"${original(s.original_headline)}>${tick(sources.some((src) => isRead(src.link)))}${esc(s.headline)} <span class="n">${sources.length} sources</span></button>`;
+      `<li><a href="${esc(src.link)}" target="_blank" rel="noopener noreferrer" data-open="${esc(s.id)}"${original(src.original_title)}>${tick(isRead(src.link))}${esc(src.title)}</a>${feed ? "" : ` <span class="f">· ${esc(src.feed)}</span>`}</li>`).join("");
+    const count = feed ? `${sources.length} articles` : `${sources.length} sources`;
+    head = `<button class="hl${seen}" data-toggle aria-expanded="false"${original(s.original_headline)}>${tick(sources.some((src) => isRead(src.link)))}${esc(s.headline)} <span class="n">${count}</span></button>`;
     list = `<ul class="srcs" hidden>${items}</ul>`;
   }
   const tags = (s.tags || []).map((t) =>
     `<button class="tag${picked.has(t.tag) ? " on" : ""}" data-tag="${esc(t.tag)}" title="${picked.has(t.tag) ? "Stop filtering by" : "Filter by"} ${esc(t.tag)}">${esc(t.tag)}${t.points > 0 ? ` <b>+${fmtPoints(t.points)}</b>` : ""}</button>`).join("");
-  const target = saveTarget(s);
-  const feedName = sources.length === 1 ? `<span class="tag plain">${esc(sources[0].feed)}</span>` : "";
+  const target = saveTarget(s, feed);
+  const feedName = !feed && sources.length === 1 ? `<span class="tag plain">${esc(sources[0].feed)}</span>` : "";
   const saveOn = isSaved(target.link);
   const votes = `<div class="votes">
       <span class="score" title="Score">${fmtPoints(s.score)}</span>
@@ -684,19 +705,26 @@ function cardHtml(s) {
       <button class="dislike${u.dislike ? " on" : ""}" data-vote="dislike" aria-pressed="${!!u.dislike}" title="Downvote" aria-label="Downvote"><svg viewBox="0 0 24 24"><path d="M12 20 4 11h5V4h6v7h5z"/></svg></button>
     </div>`;
   const save = `<button class="save${saveOn ? " on" : ""}" data-save aria-pressed="${saveOn}" title="${saveOn ? "Saved" : "Save"}" aria-label="${saveOn ? "Saved" : "Save"}"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-5-6 5z"/></svg></button>`;
-  return `<article class="card" data-id="${esc(s.id)}">
+  return `<article class="card" data-id="${esc(s.id)}" data-feed="${esc(feed)}">
     <div class="top">${head}${votes}</div>
     ${list}
     <div class="meta">${tags}${feedName}${save}</div>
   </article>`;
 }
+// A story can appear in several by-source groups. Vote and read state is
+// story-level, so replace every copy; each keeps its own feed and open list.
 function refreshCard(id) {
-  const el = document.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
   const story = findStory(id);
-  if (!el || !story) return;
-  const open = el.querySelector("[data-toggle]")?.getAttribute("aria-expanded") === "true";
-  el.outerHTML = cardHtml(story);
-  if (open) toggleSources(document.querySelector(`.card[data-id="${CSS.escape(id)}"]`), true);
+  if (!story) return;
+  for (const el of document.querySelectorAll(`.card[data-id="${CSS.escape(id)}"]`)) {
+    const feed = el.dataset.feed || "";
+    const open = el.querySelector("[data-toggle]")?.getAttribute("aria-expanded") === "true";
+    el.outerHTML = cardHtml(story, feed);
+    if (!open) continue;
+    const next = [...document.querySelectorAll(`.card[data-id="${CSS.escape(id)}"]`)]
+      .find((c) => (c.dataset.feed || "") === feed);
+    if (next) toggleSources(next, true);
+  }
 }
 function toggleSources(card, force) {
   const btn = card.querySelector("[data-toggle]");
@@ -745,6 +773,25 @@ function clearTags() {
   picked.clear();
   render();
 }
+// One group heading, its top cards and the fold control. `openSet` holds the
+// expansion state for this kind of group; `feed` limits the cards to one source.
+function groupBlock(label, group, openSet, { showAll = false, tag = false, feed = "" } = {}) {
+  group = [...group].sort((a, b) => (b.score || 0) - (a.score || 0));
+  const open = openSet.has(label);
+  const shown = showAll || open ? group : group.slice(0, GROUP_TOP);
+  const expand = !showAll && group.length > GROUP_TOP
+    ? `<button class="expand" data-expand="${esc(label)}" aria-expanded="${open}" aria-label="${open ? "Show fewer" : `Show all ${group.length}`}" title="${open ? "Show fewer" : `Show all ${group.length}`}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`
+    : "";
+  const title = tag && label !== "Other"
+    ? `<button data-tag="${esc(label)}" title="Filter by ${esc(label)}">${esc(label)}</button>`
+    : esc(label);
+  const fold = !showAll && open && group.length > GROUP_TOP
+    ? `<button class="fold" data-expand="${esc(label)}" aria-expanded="true" aria-label="Show fewer" title="Show fewer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>`
+    : "";
+  return `<h3 class="group" data-group="${esc(label)}">${title} ${expand} <span class="c">${group.length}</span></h3>${shown.map((s) => cardHtml(s, feed)).join("")}${fold}`;
+}
 // Grouped view: each card goes under its tag that the most cards share (ticked
 // tags aside, since every card has them). Groups are ordered by the sum of
 // their cards' scores, so both weight and size count. Cards left alone in
@@ -773,21 +820,24 @@ function groupedHtml(cards, showAll = false) {
   list.sort((a, b) => total(b[1]) - total(a[1]) || b[1].length - a[1].length || a[0].localeCompare(b[0]));
   if (roundup) list.push(roundup);
   if (other.length) list.push(["Other", other]);
-  return list.map(([t, group]) => {
-    group = [...group].sort((a, b) => (b.score || 0) - (a.score || 0));
-    const open = expanded.has(t);
-    const shown = showAll || open ? group : group.slice(0, GROUP_TOP);
-    const expand = !showAll && group.length > GROUP_TOP
-      ? `<button class="expand" data-expand="${esc(t)}" aria-expanded="${open}" aria-label="${open ? "Show fewer" : `Show all ${group.length}`}" title="${open ? "Show fewer" : `Show all ${group.length}`}">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`
-      : "";
-    const title = t === "Other" ? esc(t) : `<button data-tag="${esc(t)}" title="Filter by ${esc(t)}">${esc(t)}</button>`;
-    const fold = !showAll && open && group.length > GROUP_TOP
-      ? `<button class="fold" data-expand="${esc(t)}" aria-expanded="true" aria-label="Show fewer" title="Show fewer">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>`
-      : "";
-    return `<h3 class="group" data-group="${esc(t)}">${title} ${expand} <span class="c">${group.length}</span></h3>${shown.map(cardHtml).join("")}${fold}`;
-  }).join("");
+  return list.map(([t, group]) => groupBlock(t, group, expanded, {showAll, tag: true})).join("");
+}
+// By-source view: a card appears under every feed that carried it, but each
+// copy lists only that feed's articles (see cardHtml), so no link shows up in
+// two groups. Groups are ordered by the sum of their cards' scores.
+function sourceHtml(cards, showAll = false) {
+  const groups = new Map();
+  for (const s of cards) {
+    for (const feed of new Set(storySources(s).map((src) => src.feed || "Other"))) {
+      if (!groups.has(feed)) groups.set(feed, []);
+      groups.get(feed).push(s);
+    }
+  }
+  const total = (group) => group.reduce((sum, s) => sum + (s.score || 0), 0);
+  const list = [...groups].sort((a, b) =>
+    total(b[1]) - total(a[1]) || b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  return list.map(([feed, group]) =>
+    groupBlock(feed, group, expandedSources, {showAll, feed})).join("");
 }
 function todayHtml() {
   if (!feed) return `<div class="empty">Loading the feed…</div>`;
@@ -812,15 +862,19 @@ function todayHtml() {
   let html = notes.map((n) => `<div class="note">${n}</div>`).join("");
   if (filtering) {
     const n = main.length + also.length;
+    const count = view === "source"
+      ? `${n} ${n === 1 ? "story" : "stories"}`
+      : `${n} ${n === 1 ? "card" : "cards"}`;
     const chips = [...picked].map((t) => `<button data-tag="${esc(t)}" title="Remove ${esc(t)}">${esc(t)} ✕</button>`).join("");
     const all = picked.size > 1 ? `<button data-clear class="plain">Clear all</button>` : "";
-    html += `<div class="filter">${n} card${n === 1 ? "" : "s"} with ${chips}${all}</div>`;
+    html += `<div class="filter">${count} with ${chips}${all}</div>`;
     if (!n) return html + `<div class="empty">Nothing today matches.</div>`;
   }
   if (view === "grouped") html += groupedHtml([...main, ...also], filtering);
+  else if (view === "source") html += sourceHtml([...main, ...also], filtering);
   else if (main.length) html += main.map(cardHtml).join("");
   else if (!filtering) html += `<div class="empty">Nothing ranked yet. Everything is under Also today.</div>`;
-  if (also.length && view !== "grouped") {
+  if (also.length && view === "ranked") {
     const openAttr = main.length && !filtering ? "" : " open";
     html += `<details class="also"${openAttr}><summary>Also today (${also.length})</summary>${also.map(cardHtml).join("")}</details>`;
   }
@@ -935,6 +989,7 @@ function setupView(message) {
       loadData();
       picked.clear();
       expanded.clear();
+      expandedSources.clear();
       tab = "today";
       lastLoad = 0;
     }
@@ -1222,10 +1277,11 @@ document.addEventListener("click", (ev) => {
   if (el.hasAttribute("data-clear")) return clearTags();
   if (el.dataset.expand) {
     const t = el.dataset.expand;
-    if (expanded.has(t)) expanded.delete(t); else expanded.add(t);
+    const openSet = view === "source" ? expandedSources : expanded;
+    if (openSet.has(t)) openSet.delete(t); else openSet.add(t);
     render();
     // Folding a long group back up: bring its heading back into view.
-    if (!expanded.has(t)) {
+    if (!openSet.has(t)) {
       const h = document.querySelector(`h3.group[data-group="${CSS.escape(t)}"]`);
       if (h && h.getBoundingClientRect().top < 0) h.scrollIntoView({block: "start"});
     }
@@ -1234,13 +1290,13 @@ document.addEventListener("click", (ev) => {
   const card = el.closest(".card");
   const id = card?.dataset.id;
   if (el.hasAttribute("data-remove-url")) return removeFeedUrl(el);
-  if (el.dataset.open) return opened(el.dataset.open, el.getAttribute("href"));
+  if (el.dataset.open) return opened(el.dataset.open, el.getAttribute("href"), card);
   if (el.dataset.tab) { tab = el.dataset.tab; render(); return; }
   if (el.hasAttribute("data-toggle")) return toggleSources(card);
-  if (el.dataset.vote && id) return vote(id, el.dataset.vote);
+  if (el.dataset.vote && id) return vote(id, el.dataset.vote, card);
   if (el.hasAttribute("data-save") && id) {
     const story = findStory(id);
-    if (story) { const s = saveTarget(story); toggleSave(s.title, s.link); }
+    if (story) { const s = saveTarget(story, card?.dataset.feed || ""); toggleSave(s.title, s.link); }
     return;
   }
   if (el.dataset.unsave) {
@@ -1252,7 +1308,7 @@ document.addEventListener("click", (ev) => {
 document.addEventListener("auxclick", (ev) => {
   if (!(ev.target instanceof Element)) return;
   const a = ev.target.closest("a[data-open]");
-  if (a && ev.button === 1) opened(a.dataset.open, a.getAttribute("href"));
+  if (a && ev.button === 1) opened(a.dataset.open, a.getAttribute("href"), a.closest(".card"));
 });
 $("settings").onclick = () => (inSettings ? render() : setupView());
 $("toTop").onclick = () => window.scrollTo({
