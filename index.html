@@ -55,6 +55,9 @@ button.tag:hover,button.tag.on{outline:1px solid var(--accent)}
 @media (max-width:420px){.tabs{gap:6px}.tabs button{padding:6px 11px}.view{padding:6px 2px}.search{min-width:96px}.search input{padding:6px 10px}}
 h3.group{display:flex;gap:8px;align-items:baseline;font-size:15px;margin:22px 0 10px}
 h3.group:first-child,.filter+h3.group,.note+h3.group{margin-top:4px}
+h3.group.source{font-size:16px;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3.group.sub{font-size:14px;margin:14px 0 8px;padding-left:10px;border-left:2px solid var(--line)}
+h3.group.source+h3.group.sub{margin-top:4px}
 h3.group .c{margin-left:auto;font-weight:400;font-size:13px;color:var(--muted)}
 h3.group button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
 h3.group button:hover{color:var(--accent)}
@@ -563,7 +566,8 @@ function tapContext(id, card = null) {
     while (h && !h.matches("h3.group")) h = h.previousElementSibling;
     if (h) {
       const group = h.dataset.group || "";
-      parts.push("group=" + (view === "source" ? encodeURIComponent(group) : group));
+      const encode = view === "source" && !group.startsWith("#");
+      parts.push("group=" + (encode ? encodeURIComponent(group) : group));
     }
   } else if (el && el.closest("details.also")) parts.push("also");
   if (picked.size) parts.push("filter=" + [...picked].join(","));
@@ -792,8 +796,9 @@ function clearFilters() {
 }
 // One group heading, its top cards and the fold control. `openSet` holds the
 // expansion state for this kind of group; `feed` limits the cards to one source,
-// and `source` makes the heading filter to that feed.
-function groupBlock(label, group, openSet, { showAll = false, tag = false, source = false, feed = "" } = {}) {
+// `source` makes the heading filter to that feed, and `sub` indents tag groups
+// inside a filtered source.
+function groupBlock(label, group, openSet, { showAll = false, tag = false, source = false, sub = false, feed = "" } = {}) {
   group = [...group].sort((a, b) => (b.score || 0) - (a.score || 0));
   const open = openSet.has(label);
   const shown = showAll || open ? group : group.slice(0, GROUP_TOP);
@@ -810,14 +815,16 @@ function groupBlock(label, group, openSet, { showAll = false, tag = false, sourc
     ? `<button class="fold" data-expand="${esc(label)}" aria-expanded="true" aria-label="Show fewer" title="Show fewer">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>`
     : "";
-  return `<h3 class="group" data-group="${esc(label)}">${title} ${expand} <span class="c">${group.length}</span></h3>${shown.map((s) => cardHtml(s, feed)).join("")}${fold}`;
+  return `<h3 class="group${sub ? " sub" : ""}" data-group="${esc(label)}">${title} ${expand} <span class="c">${group.length}</span></h3>${shown.map((s) => cardHtml(s, feed)).join("")}${fold}`;
 }
 // Grouped view: each card goes under its tag that the most cards share (ticked
 // tags aside, since every card has them). Groups are ordered by the sum of
 // their cards' scores, so both weight and size count. Cards left alone in
 // their group go under Other. Roundups always form their own group, even when
 // there is only one, and are pinned just before Other regardless of weight.
-function groupedHtml(cards, showAll = false) {
+// `sub` renders these as tag sub-groups inside a filtered source, and `feed`
+// limits each card to that source's articles.
+function groupedHtml(cards, showAll = false, sub = false, feed = "") {
   const counts = {};
   for (const s of cards) for (const t of tagNames(s)) if (!picked.has(t)) counts[t] = (counts[t] || 0) + 1;
   const groups = new Map();
@@ -840,7 +847,7 @@ function groupedHtml(cards, showAll = false) {
   list.sort((a, b) => total(b[1]) - total(a[1]) || b[1].length - a[1].length || a[0].localeCompare(b[0]));
   if (roundup) list.push(roundup);
   if (other.length) list.push(["Other", other]);
-  return list.map(([t, group]) => groupBlock(t, group, expanded, {showAll, tag: true})).join("");
+  return list.map(([t, group]) => groupBlock(t, group, expanded, {showAll, tag: true, sub, feed})).join("");
 }
 // By-source view: a card appears under every feed that carried it, but each
 // copy lists only that feed's articles (see cardHtml), so no link shows up in
@@ -860,6 +867,10 @@ function sourceHtml(cards, showAll = false) {
     total(b[1]) - total(a[1]) || b[1].length - a[1].length || a[0].localeCompare(b[0]));
   return list.map(([feed, group]) =>
     groupBlock(feed, group, expandedSources, {showAll, feed, source: true})).join("");
+}
+// Parent heading for a filtered source; clicking it clears the source filter.
+function sourceHeadHtml(feed, count) {
+  return `<h3 class="group source" data-group="${esc(feed)}"><button data-filter-source="${esc(feed)}" aria-pressed="true" title="Stop filtering by ${esc(feed)}">${esc(feed)}</button> <span class="c">${count}</span></h3>`;
 }
 function todayHtml() {
   if (!feed) return `<div class="empty">Loading the feed…</div>`;
@@ -897,7 +908,11 @@ function todayHtml() {
     if (!n) return html + `<div class="empty">Nothing today matches.</div>`;
   }
   if (view === "grouped") html += groupedHtml([...main, ...also], filtering);
-  else if (view === "source") html += sourceHtml([...main, ...also], filtering);
+  else if (view === "source") {
+    const cards = [...main, ...also];
+    if (pickedSource) html += sourceHeadHtml(pickedSource, cards.length) + groupedHtml(cards, filtering, true, pickedSource);
+    else html += sourceHtml(cards, filtering);
+  }
   else if (main.length) html += main.map(cardHtml).join("");
   else if (!filtering) html += `<div class="empty">Nothing ranked yet. Everything is under Also today.</div>`;
   if (also.length && view === "ranked") {
